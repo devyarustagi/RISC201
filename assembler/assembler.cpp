@@ -5,6 +5,14 @@
 
 #define MAX_LINE_LEN 256
 
+Assembler::Assembler(const std::string& inputFilePath, const std::string& outputFilePath) : inputFile(inputFilePath) {
+    if (!inputFile.is_open()) {
+        throw std::runtime_error("Error: Could not open file '" + inputFilePath +
+                                 "' (it may not exist or lack permissions).");
+    }
+    outputFile = std::ofstream(outputFilePath);
+}
+
 // Splits a single source line into tokens. Strips the comment (everything from
 // the first '#'), separates on whitespace, carriage returns and commas, and
 // verifies that every token except the first and last is followed by a comma.
@@ -59,11 +67,10 @@ std::vector<std::string> Assembler::tokenizer(std::string& line) {
                                         ": expected ',' after '" + tokens[i] + "'.");
         }
     }
-
     return tokens;
 }
 
-void Assembler::parser(std::ifstream& inputFile) {
+void Assembler::firstPass() {
     std::string line;
     while (std::getline(inputFile, line)) {
         lc++;
@@ -78,3 +85,6 @@ void Assembler::parser(std::ifstream& inputFile) {
     }
 }
 
+void Assembler::Assemble() {
+    return;
+}

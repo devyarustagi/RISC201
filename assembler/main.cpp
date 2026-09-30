@@ -2,6 +2,7 @@
 #include <fstream>
 #include <string>
 #include <cstdlib>
+#include <exception>
 #include "assembler.hpp"
 
 int main(int argc, char** argv) {
@@ -35,13 +36,11 @@ int main(int argc, char** argv) {
         std::cerr << "Error: '" << argv[2] << "' is not a valid command line option.\n";
         return EXIT_FAILURE;
     }
-    
-    //read the assembly file
-    std::ofstream outputFile(outputFilePath);
-    std::ifstream inputFile(inputFilePath);
-
-    if (!inputFile.is_open()) {
-        std::cerr << "Error: Could not open file '" << inputFilePath << "' (it may not exist or lack permissions).\n";
+    try {
+        Assembler assembler(inputFilePath, outputFilePath);
+        assembler.Assemble();
+    } catch (const std::exception& e) {
+        std::cerr << e.what() << '\n';
         return EXIT_FAILURE;
     }
 

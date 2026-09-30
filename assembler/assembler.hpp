@@ -1,5 +1,5 @@
-#ifndef ASSEMBLER
-#define ASSEMBLER
+#ifndef ASSEMBLER_H
+#define ASSEMBLER_H
 
 #include <fstream>
 #include <string>
@@ -8,9 +8,13 @@
 class Assembler {
 private:
     int lc{0};
+    std::ifstream inputFile;
+    std::ofstream outputFile;
     std::vector<std::string> tokenizer(std::string&);
+    void firstPass();
 public :
-    void parser(std::ifstream&);
+    Assembler(const std::string& inputFilePath, const std::string& outputFilePath);
+    void Assemble();
     
 };
 
