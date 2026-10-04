@@ -25,17 +25,27 @@ struct instructionDetails {
     instructionFields fields;
 };
 
+// Intermediate representation
+struct instructionIR {
+    uint32_t address;
+    instructionName mnemonic;
+    std::vector<std::string> operands;
+    int lineNumber;
+};
 
 class Assembler {
 
 private:
-    int lc{0};
+    int lineNumber{0};
+    uint32_t lc{0};
     std::ifstream inputFile;
     std::ofstream outputFile;
     static const std::unordered_map<instructionName, instructionDetails> instructionTable;
 
 private:
-    std::vector<std::string> tokenizer(std::string&);
+    void tokenizer(std::string&);
+    std::vector<instructionIR> irList;
+    std::unordered_map<std::string, uint32_t> symbolTable;
     void firstPass();
 
 public :

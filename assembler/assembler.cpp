@@ -1,7 +1,20 @@
 #include "assembler.hpp"
+#include <cctype>
 #include <cstdlib>
 #include <stdexcept>
 
+const std::string WHITESPACE = " \n\r\t\f\v";
+std::string ltrim(const std::string& s) {
+    size_t start = s.find_first_not_of(WHITESPACE);
+    return (start == std::string::npos) ? "" : s.substr(start);
+}
+std::string rtrim(const std::string& s) {
+    size_t end = s.find_last_not_of(WHITESPACE);
+    return (end == std::string::npos) ? "" : s.substr(0, end + 1);
+}
+std::string trim(const std::string& s) {
+    return rtrim(ltrim(s));
+}
 
 const std::unordered_map<instructionName, instructionDetails> Assembler::instructionTable = {
 
@@ -62,11 +75,55 @@ Assembler::Assembler(const std::string& inputFilePath, const std::string& output
 // Splits a single source line into tokens. Strips the comment (everything from
 // the first '#'), separates on whitespace, carriage returns and commas, and
 // verifies that every token except the first and last is followed by a comma.
-std::vector<std::string> Assembler::tokenizer(std::string& line) {
+void Assembler::tokenizer(std::string& line) {
     // Strip a comment if present (the caller does not reuse the line).
     size_t commentPos = line.find('#');
     if (commentPos != std::string::npos) {
         line.erase(commentPos);
+        if (line.empty()) {
+            return;
+        }
+    }
+    
+    while (true) {
+        size_t labelPos = line.find(':');
+        if (labelPos == std::string::npos) {
+            break;
+        }
+
+        std::string label = line.substr(0, labelPos);
+        trim(label);
+        if (label.empty()) {
+            throw std::runtime_error("Error: line " + std::to_string(lineNumber) +
+                                    ": empty label before ':'.");
+        }
+
+        for (size_t i = 0; i < label.size(); ++i) {
+            if (label[i] == ' ' || label[i] == '\t' || label[i] == '\r') {
+                throw std::runtime_error("Error: line " + std::to_string(lineNumber) +
+                                        ": label '" + label + "' has spaces before ':'.");
+            }
+            if (i == 0 && std::isdigit(static_cast<unsigned char>(label[i]))) {
+                throw std::runtime_error("Error: line " + std::to_string(lineNumber) +
+                                        ": label '" + label + "' starts with a number.");
+            }
+        }
+        if (symbolTable.count(label) > 0){
+            throw std::runtime_error("Error: line " + std::to_string(lineNumber) +
+                                        ": label '" + label + "' already defined.");
+        }
+        symbolTable[label] = lc;
+
+        size_t nextPos = labelPos + 1;
+        while (nextPos < line.size() &&
+               (line[nextPos] == ' ' || line[nextPos] == '\t' || line[nextPos] == '\r')) {
+            ++nextPos;
+        }
+        line.erase(0, nextPos);
+
+        if (line.empty()) {
+            return;
+        }
     }
     // Split the remaining text into tokens, remembering for each token whether
     // a comma followed it (needed for the separator check below).
@@ -93,7 +150,10 @@ std::vector<std::string> Assembler::tokenizer(std::string& line) {
                 inToken = false;
             } else if (!tokens.empty()) {
                 // Covers forms like "r1 , r2" where the token was already flushed.
-                commaAfter.back() = true;
+                if (commaAfter.back()){
+                    throw std::runtime_error("Syntax Error: line " + std::to_string(lineNumber) 
+                                                +": got multiple commas.");
+                } else commaAfter.back() = true;
             }
         } else {
             current.push_back(c);
@@ -109,28 +169,60 @@ std::vector<std::string> Assembler::tokenizer(std::string& line) {
     // followed by at least one comma.
     for (size_t i = 1; i + 1 < tokens.size(); ++i) {
         if (!commaAfter[i]) {
-            throw std::runtime_error("Error: line " + std::to_string(lc) +
+            throw std::runtime_error("Error: line " + std::to_string(lineNumber) +
                                         ": expected ',' after '" + tokens[i] + "'.");
         }
     }
-    return tokens;
+    if (tokens.empty()){return;}
+    // Check if there is no extra comma, if the mnemonic exists in our ISA, and check if
+    // the operand size match
+    if (commaAfter.back()){
+        throw std::runtime_error("Error: line " + std::to_string(lineNumber) +
+                                        ": got ',' after end of an instruction.");
+    }
+    instructionName iName = tokens[0];
+    if (instructionTable.count(iName) == 0){
+        throw std::runtime_error("Error: line " + std::to_string(lineNumber) +
+                                        ": instruction '" + tokens[0] + "' is not recognized.");
+    }
+    instructionFields currFields = instructionTable.at(iName).fields;
+    if (tokens.size()-1 != currFields.count()){
+        throw std::runtime_error("Error: line " + std::to_string(lineNumber) +
+                            ": expected " + std::to_string(currFields.count()) + " operands.");
+    }
+
+    instructionIR currIR;
+    currIR.lineNumber = lineNumber;
+    currIR.address = lc;
+    currIR.mnemonic = iName;
+    for (int i = 1; i < tokens.size(); i++){
+        currIR.operands.push_back(tokens[i]);
+    }
+
+    irList.push_back(currIR);
+    lc += 4;
+    return;
 }
 
 void Assembler::firstPass() {
     std::string line;
     while (std::getline(inputFile, line)) {
-        lc++;
+        lineNumber++;
         // Enforce the maximum line length on the raw line; abort if exceeded.
         if (line.size() > MAX_LINE_LEN) {
-            throw std::runtime_error("Error: line " + std::to_string(lc) +
+            throw std::runtime_error("Error: line " + std::to_string(lineNumber) +
                                         " is longer than the maximum allowed " +
                                         std::to_string(MAX_LINE_LEN) + " characters.");
         }
 
-        std::vector<std::string> tokens = tokenizer(line);
+        tokenizer(line);
     }
 }
 
 void Assembler::Assemble() {
-    return;
+    inputFile.clear();
+    inputFile.seekg(0, std::ios::beg);
+    lineNumber = 0;
+    lc = 0;
+    firstPass();
 }
