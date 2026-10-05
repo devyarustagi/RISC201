@@ -47,6 +47,9 @@ private:
     std::vector<instructionIR> irList;
     std::unordered_map<std::string, uint32_t> symbolTable;
     void firstPass();
+    void secondPass();
+    uint32_t parseRegister(const std::string&, int);
+    int32_t parseImmediateOrSymbol(const std::string&, uint32_t, int);
 
 public :
     Assembler(const std::string& inputFilePath, const std::string& outputFilePath);
