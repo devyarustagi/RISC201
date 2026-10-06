@@ -1,6 +1,6 @@
 CXX ?= g++
 CXXFLAGS ?= -std=c++17 -Wall -Wextra -O2
-INCLUDES := -Ialu/include
+INCLUDES := -Iinclude
 
 SRCS := main.cpp $(wildcard src/components/*.cpp src/stages/*.cpp src/core/*.cpp)
 OBJS := $(SRCS:.cpp=.o)
@@ -44,7 +44,7 @@ check: $(TARGET) roms
 # Unit-test the ALU against native C++ arithmetic.
 ALU_TEST := build/alu_test
 
-$(ALU_TEST): alu/tests/alu_test.cpp alu/src/components/alu.cpp alu/src/components/alu_units.cpp
+$(ALU_TEST): tests/alu_test.cpp src/components/alu.cpp src/components/alu_units.cpp
 	@mkdir -p build
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $^
 
