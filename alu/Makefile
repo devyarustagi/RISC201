@@ -6,7 +6,7 @@ SRCS := main.cpp $(wildcard src/components/*.cpp src/stages/*.cpp src/core/*.cpp
 OBJS := $(SRCS:.cpp=.o)
 TARGET := processor_sim
 
-.PHONY: all clean roms run program check alu-test
+.PHONY: all clean roms run program check alu-test alu-demo
 
 all: $(TARGET)
 
@@ -50,6 +50,16 @@ $(ALU_TEST): tests/alu_test.cpp src/components/alu.cpp src/components/alu_units.
 
 alu-test: $(ALU_TEST)
 	./$(ALU_TEST)
+
+# Demo: readable examples for every ALU operation (or one op: build/alu_demo mul 7 -3).
+ALU_DEMO := build/alu_demo
+
+$(ALU_DEMO): tests/alu_demo.cpp src/components/alu.cpp src/components/alu_units.cpp
+	@mkdir -p build
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $^
+
+alu-demo: $(ALU_DEMO)
+	./$(ALU_DEMO)
 
 clean:
 	rm -f $(OBJS) $(TARGET)

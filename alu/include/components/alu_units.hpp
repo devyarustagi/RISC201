@@ -13,11 +13,14 @@
  * | Unit               | Algorithm                                   |
  * | :----------------- | :------------------------------------------ |
  * | Adder / subtractor | Kogge-Stone parallel-prefix adder           |
- * | Multiplier         | Radix-4 Booth recoding + Dadda/Wallace tree |
- * | Divider            | Non-restoring division                      |
+ * | Multiplier         | Radix-4 Booth recoding + Dadda tree         |
+ * | Divider            | Non-restoring division (div and mod)        |
  * | Shifter            | Logarithmic barrel shifter                  |
+ * | FPU                | IEEE-754 single precision, reusing the four |
+ * |                    | integer units for the significand work      |
  *
- * All operands and results are raw 32-bit words.
+ * All operands and results are raw 32-bit words; floating-point values are
+ * their IEEE-754 bit patterns.
  */
 namespace AluUnits {
 
@@ -42,13 +45,10 @@ struct DivideResult {
     bool divideByZero = false;
 };
 
-/** @brief Carry-save reduction tree used by the multiplier. */
-enum class ReductionTree : uint8_t { Dadda = 0, Wallace = 1 };
-
 /** @brief Shift performed by the barrel shifter. */
 enum class ShiftKind : uint8_t { Lsl, Lsr, Asr };
 
-/** @brief Hardware cost of a reduction tree, counted per bit column. */
+/** @brief Hardware cost of the Dadda tree, counted per bit column. */
 struct TreeCost {
     int levels = 0;
     int fullAdders = 0;
@@ -95,28 +95,38 @@ AddResult AddSub(uint32_t a, uint32_t b, bool subtract);
 CompareResult CompareSigned(uint32_t a, uint32_t b);
 
 /**
- * @brief Radix-4 Booth multiplier with a carry-save reduction tree.
+ * @brief Radix-4 Booth multiplier with a Dadda tree.
  *
  * Recodes @p b into 16 digits in {-2..+2} (with b(-1) = 0), builds the partial
- * products 0 / ±A / ±2A shifted by 2j, reduces them to two rows with the chosen
- * tree and adds those with the Kogge-Stone adder. Only the low 32 bits are
+ * products 0 / ±A / ±2A shifted by 2j, reduces them to two rows with the Dadda
+ * tree (16 → 13 → 9 → 6 → 4 → 3 → 2) and adds those with the Kogge-Stone adder. Only the low 32 bits are
  * produced, so overflow wraps (the ISA has no overflow flag).
  *
  * @param a     multiplicand
  * @param b     multiplier
- * @param tree  Dadda or Wallace reduction
  * @return the low 32 bits of a × b
  */
-uint32_t BoothMultiply(uint32_t a, uint32_t b, ReductionTree tree);
+uint32_t BoothMultiply(uint32_t a, uint32_t b);
 
 /**
- * @brief Counts the full and half adders a reduction tree needs for the
- *        32-column Booth product (used for the Dadda vs Wallace evaluation).
+ * @brief Full 64-bit signed product from the same Booth + Dadda datapath.
  *
- * @param tree  Dadda or Wallace reduction
+ * BoothMultiply() keeps only the low 32 bits of this. The FPU uses it for the
+ * 24 × 24-bit significand product (48 bits).
+ *
+ * @param a     multiplicand (signed 32-bit)
+ * @param b     multiplier (signed 32-bit)
+ * @return the exact 64-bit product a × b (two's complement)
+ */
+uint64_t BoothMultiplyWide(uint32_t a, uint32_t b);
+
+/**
+ * @brief Counts the levels, full adders and half adders the Dadda tree needs
+ *        for the 32-column Booth product.
+ *
  * @return levels, full adders and half adders
  */
-TreeCost CountTreeHardware(ReductionTree tree);
+TreeCost CountDaddaHardware();
 
 /**
  * @brief Signed non-restoring divider.
@@ -144,6 +154,83 @@ DivideResult NonRestoringDivide(uint32_t a, uint32_t b);
  * @return the shifted value
  */
 uint32_t BarrelShift(uint32_t a, uint32_t amount, ShiftKind kind);
+
+// ---------------------------------------------------------------------------
+// Floating-point unit (IEEE-754 single precision, round to nearest even)
+// ---------------------------------------------------------------------------
+// Every FP operation follows the FPU diagrams: unpack -> unit -> normalise ->
+// round -> pack, with a separate special-case block (NaN, infinity, zero)
+// whose result the output mux picks instead (isSpecial).
+
+/**
+ * @brief FP add / subtract.
+ *
+ * Flips the sign of B for fsub, swaps so X is the larger magnitude, aligns Y
+ * by the exponent difference (lost bits OR-ed into sticky), adds or subtracts
+ * the significands on the Kogge-Stone adder, then normalises, rounds and packs.
+ *
+ * @param a         first operand (IEEE-754 bits)
+ * @param b         second operand (IEEE-754 bits)
+ * @param subtract  true for fsub
+ * @return the IEEE-754 result (∞ − ∞ → NaN, overflow → ±∞, subnormals kept)
+ */
+uint32_t FloatAdd(uint32_t a, uint32_t b, bool subtract);
+
+/**
+ * @brief FP multiply.
+ *
+ * Sign = sA ⊕ sB, exponent = eA + eB − 127 (Kogge-Stone), significand =
+ * 24 × 24-bit product on the Booth multiplier (Dadda tree), then normalise (product ≥ 2 →
+ * shift right 1), round and pack.
+ *
+ * @param a     first operand (IEEE-754 bits)
+ * @param b     second operand (IEEE-754 bits)
+ * @return the IEEE-754 product (0 × ∞ → NaN)
+ */
+uint32_t FloatMultiply(uint32_t a, uint32_t b);
+
+/**
+ * @brief FP divide.
+ *
+ * Sign = sA ⊕ sB, exponent = eA − eB + 127 (Kogge-Stone), significand =
+ * non-restoring division producing 26 quotient bits plus a sticky bit
+ * (remainder ≠ 0), then normalise (quotient < 1 → shift left 1), round, pack.
+ *
+ * @param a  dividend (IEEE-754 bits)
+ * @param b  divisor (IEEE-754 bits)
+ * @return the IEEE-754 quotient (x / 0 → ±∞, 0 / 0 and ∞ / ∞ → NaN)
+ */
+uint32_t FloatDivide(uint32_t a, uint32_t b);
+
+/**
+ * @brief fcmp: maps each operand to an ordered integer key and compares the
+ *        keys on the Kogge-Stone adder. +0 equals −0; any NaN is unordered
+ *        (all three flags false).
+ *
+ * @param a  first operand (IEEE-754 bits)
+ * @param b  second operand (IEEE-754 bits)
+ * @return equal / greater / less
+ */
+CompareResult CompareFloat(uint32_t a, uint32_t b);
+
+/**
+ * @brief itof: sign + magnitude, leading-zero count, normalise with the barrel
+ *        shifter, exponent = 158 − lz, round to 24 bits and pack.
+ *
+ * @param a  signed 32-bit integer
+ * @return the nearest IEEE-754 float (0 → +0)
+ */
+uint32_t IntToFloat(uint32_t a);
+
+/**
+ * @brief ftoi: unpack, shift the 24-bit significand by s = exponent − 150 on
+ *        the barrel shifter (truncating the fraction), saturate, then negate
+ *        if negative. Rounds toward zero, like C.
+ *
+ * @param a  IEEE-754 bits
+ * @return the 32-bit integer (|x| ≥ 2³¹ → INT_MAX / INT_MIN, NaN → 0)
+ */
+uint32_t FloatToInt(uint32_t a);
 
 }  // namespace AluUnits
 

@@ -125,7 +125,9 @@ struct Microinstruction {
 enum class AluOp {
     ADD, SUB, MUL, DIV, AND, OR, LSL, LSR, ASR, NOT, CMP,
     FADD, FSUB, FMUL, FDIV, FCMP, PASS,
-    MOD  // remainder from the divider (isMod)
+    MOD,   // remainder from the divider (isMod)
+    ITOF,  // int32 -> float (FPU convert)
+    FTOI   // float -> int32 (FPU convert)
 };
 
 // ALU A-operand select.

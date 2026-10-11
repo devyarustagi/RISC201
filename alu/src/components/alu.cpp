@@ -8,7 +8,12 @@ namespace {
 int latencyOf(AluOp op) {
     switch (op) {
         case AluOp::MUL:  return 2;
-        case AluOp::DIV:  return 32;
+        case AluOp::DIV:
+        case AluOp::MOD:  return 32;
+        case AluOp::FADD:
+        case AluOp::FSUB:
+        case AluOp::FMUL: return 2;
+        case AluOp::FDIV: return 26;
         default:          return 1;
     }
 }
@@ -35,14 +40,15 @@ uint32_t Alu::Execute(AluOp op, uint32_t a, uint32_t b) {
             return AddSub(a, b, true).sum;
 
         // Multiplier (radix-4 Booth + reduction tree).
-        case AluOp::MUL: return BoothMultiply(a, b, tree_);
+        case AluOp::MUL: return BoothMultiply(a, b);
 
-        // Divider (non-restoring); the ISA has no mod, so only the quotient is used.
-        case AluOp::DIV: {
+        // Divider (non-restoring): isMod ? R : Q.
+        case AluOp::DIV:
+        case AluOp::MOD: {
             const DivideResult result = NonRestoringDivide(a, b);
             divideByZero_ = result.divideByZero;
             if (divideByZero_) lastLatency_ = 1;
-            return result.quotient;
+            return op == AluOp::MOD ? result.remainder : result.quotient;
         }
 
         // Logic unit + pass-through.
@@ -56,13 +62,16 @@ uint32_t Alu::Execute(AluOp op, uint32_t a, uint32_t b) {
         case AluOp::LSR: return BarrelShift(a, b, ShiftKind::Lsr);
         case AluOp::ASR: return BarrelShift(a, b, ShiftKind::Asr);
 
-        // Floating point is not part of this ALU.
-        case AluOp::FADD:
-        case AluOp::FSUB:
-        case AluOp::FMUL:
-        case AluOp::FDIV:
+        // Floating-point unit (IEEE-754 single precision).
+        case AluOp::FADD: return FloatAdd(a, b, false);
+        case AluOp::FSUB: return FloatAdd(a, b, true);
+        case AluOp::FMUL: return FloatMultiply(a, b);
+        case AluOp::FDIV: return FloatDivide(a, b);
         case AluOp::FCMP:
+            setFlags(CompareFloat(a, b));  // flags WE = isFcmp
             return 0;
+        case AluOp::ITOF: return IntToFloat(a);
+        case AluOp::FTOI: return FloatToInt(a);
     }
     return 0;
 }
