@@ -34,8 +34,6 @@ To support precise control flow hijacking, the standard data path requires sever
     *   Addition of a **CPL (Current Privilege Level)** register (1 = User, 0 = OS). The decode unit checks the opcode of the instruction and if it is a privileged instruction then it checks the value of the CPL. If the CPL is 1 whilst the instruction being a privileged one, a `lowPriv` exception is raised.
     *   Implementation of **Privileged Instructions** (`movz`, `retz`) that operate on a restricted register window visible only to the OS (general registers + special registers).
 
----
-
 ## 4. The Universal Exception Handling Flow
 Regardless of the trigger, the hardware follows a strict, deterministic sequence to ensure pipeline stability.
 1.  **Marking the Instruction:** When an error occurs or an external signal arrives, the Exception Unit "marks" an instruction in the pipeline and assigns it an exception code. See [procedure for marking instructions](#5-marking-instructions-in-the-pipeline) for more details. 
@@ -50,11 +48,10 @@ Regardless of the trigger, the hardware follows a strict, deterministic sequence
     *   It restores the general-purpose registers and `oldSP`.
 7.  **Resumption:** The OS executes `retz`, which automatically transfers the contents of `oldPC` back into the main `PC` and restores the privilege level, resuming user execution seamlessly.
 
---- 
 ## 5. Marking Instructions in the Pipeline:
 * The Exception unit is responsible for marking instructions. By marking an instruction, we mean setting the `is_exception` bit in the instruction packet of the defaulting instruction to 1 alongside setting the `cause` field too.
 * If an asynchronous exception(like a hardware interrupt occurs), the instruction being fetched by the IF stage gets marked. For synchronous exceptions, the Exception Unit uses a priority encoder which prioritizes exceptions occurring in a later stage of the pipeline and marks the highest priority exception only(we do this because multiple exceptions may be triggered in different stages of the pipeline in the same cycle thus we only need to mark the last of those exceptions as the ones in earlier stages of the pipeline will anyways be flushed out when the last one is handled.) The output of the priority encoder is what gets written into the `cause` field.
----
+
 ## 6. Privileged Instructions: `movz` and `retz` Semantics
 To prevent user programs from corrupting system state or introducing viruses, the ISA introduces privileged instructions that can only be executed when `CPL == 0`. These instructions use a restricted **Register Window**, meaning they see a different view of the registers (only `r0`, `oldPC`, `oldSP`, `oldFlags`, and `sp`).
 
@@ -64,4 +61,4 @@ To prevent user programs from corrupting system state or introducing viruses, th
 *   **`retz` (Return from Exception):** Reverses the context switch and returns control to the user program.
     *   **Implementation:** It reads the value of `oldPC` and transfers its contents to the `PC`. 
     *   **Privilege Drop:** Executing `retz` automatically changes the `CPL` register from 0 back to 1, returning the processor to user mode.
---- 
+
