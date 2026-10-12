@@ -1,4 +1,4 @@
-# Presentation: Implementing Precise Exceptions and Interrupts in a Pipelined Datapath
+# Implementing Precise Exceptions and Interrupts in a Pipelined Datapath
 
 ## 1. Architectural Foundations and Precise State
 To support an operating system safely, the processor must be able to halt the current program, execute a privileged handler routine, and resume the original program without corrupting its state. This requires implementing **Precise Exceptions**.
@@ -32,7 +32,7 @@ To support precise control flow hijacking, the standard data path requires sever
     *   `oldFlags`: Captures the exact state of the condition codes at the moment of interruption.
 *   **Privilege and Register Windows:**
     *   Addition of a **CPL (Current Privilege Level)** register (1 = User, 0 = OS). The decode unit checks the opcode of the instruction and if it is a privileged instruction then it checks the value of the CPL. If the CPL is 1 whilst the instruction being a privileged one, a `lowPriv` exception is raised.
-    *   Implementation of **Privileged Instructions** (`movz`, `retz`) that operate on a restricted register window visible only to the OS (general registers + special registers).
+    *   Implementation of **Privileged Instructions** (`movz`, `retz`) that operate on a restricted register window visible only to the OS (general registers + special registers). See [semantics of privileged instructions](#6-privileged-instructions-movz-and-retz-semantics) for more details.
 
 ## 4. The Universal Exception Handling Flow
 Regardless of the trigger, the hardware follows a strict, deterministic sequence to ensure pipeline stability.
