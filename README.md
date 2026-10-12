@@ -3,7 +3,7 @@
 The ALU executes every operation of the EX stage, integer and floating point.
 Each operation runs through an **algorithm-level model of its hardware unit**,
 so the simulator computes results the same way the design diagrams do — not
-with C++'s built-in `+`, `*`, `/` or `float` maths.
+with C++'s built-in `+`, `*`, `/` or `float` maths. Refer to `ALU.pdf` to understand the algorithms used.
 
 The FPU is part of the ALU and **reuses the integer units** (adder, multiplier,
 divider, shifter) for its significand and exponent work.
