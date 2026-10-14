@@ -114,7 +114,7 @@ void Assembler::tokenizer(std::string& line) {
     currIR.lineNumber = lineNumber;
     currIR.address = lc;
     currIR.mnemonic = iName;
-    for (int i = 1; i < tokens.size(); i++) {
+    for (std::size_t i = 1; i < tokens.size(); i++) {
         currIR.operands.push_back(tokens[i]);
     }
 

@@ -24,7 +24,16 @@ void Assembler::secondPass() {
         uint32_t opcode = details.opcode.to_ulong();
         instruction |= (opcode << 26);
         size_t opIdx = 0;
-        if (fieldFlags == (HAS_RD | HAS_RS1 | HAS_RS2)) {
+        if (currIR.mnemonic == "movz") {
+            // Both operands are register-window entries (r0, sp, oldPC, oldSP,
+            // oldFlags, eBase, eCode), packed into the rd and rs2 fields.
+            uint32_t rdWin  = parseWindowRegister(currIR.operands[opIdx++], currIR.lineNumber);
+            uint32_t srcWin = parseWindowRegister(currIR.operands[opIdx++], currIR.lineNumber);
+
+            instruction |= (rdWin  & 0x0F) << 22;
+            instruction |= (srcWin & 0x0F) << 14;
+
+        } else if (fieldFlags == (HAS_RD | HAS_RS1 | HAS_RS2)) {
             uint32_t rd  = parseRegister(currIR.operands[opIdx++], currIR.lineNumber);
             uint32_t rs1 = parseRegister(currIR.operands[opIdx++], currIR.lineNumber);
             uint32_t rs2 = parseRegister(currIR.operands[opIdx++], currIR.lineNumber);
@@ -78,9 +87,11 @@ void Assembler::secondPass() {
             instruction |= (rs2 & 0x0F) << 14;
 
         } else if (fieldFlags == HAS_OFFSET) {
-            int32_t offset = parseImmediateOrSymbol(currIR.operands[opIdx++], currIR.address, currIR.lineNumber);
+            int32_t offset = parseBranchOffset(currIR.operands[opIdx++], currIR.address, currIR.lineNumber);
 
-            instruction |= (offset & 0x3FFFFFF);
+            // Bits [24:0]: signed word offset. Bit 25 (the dynamic prediction
+            // bit maintained by the processor) is left clear.
+            instruction |= (offset & 0x1FFFFFF);
 
         } else if (fieldFlags == 0) {
         }

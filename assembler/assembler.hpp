@@ -6,6 +6,7 @@
 #include <vector>
 #include <unordered_map>
 #include <bitset>
+#include <cstdint>
 
 #define MAX_LINE_LEN 256
 #define HAS_RD 1
@@ -49,7 +50,9 @@ private:
     void firstPass();
     void secondPass();
     uint32_t parseRegister(const std::string&, int);
+    uint32_t parseWindowRegister(const std::string&, int);
     int32_t parseImmediateOrSymbol(const std::string&, uint32_t, int);
+    int32_t parseBranchOffset(const std::string&, uint32_t, int);
 
 public :
     Assembler(const std::string& inputFilePath, const std::string& outputFilePath);
