@@ -89,9 +89,10 @@ void Assembler::secondPass() {
         } else if (fieldFlags == HAS_OFFSET) {
             int32_t offset = parseBranchOffset(currIR.operands[opIdx++], currIR.address, currIR.lineNumber);
 
-            // Bits [24:0]: signed word offset. Bit 25 (the dynamic prediction
-            // bit maintained by the processor) is left clear.
-            instruction |= (offset & 0x1FFFFFF);
+            instruction |= (offset & 0x3FFFFFF);
+            if ((currIR.mnemonic == "call")||(currIR.mnemonic == "b")){
+                instruction |= (1<<25);
+            }
 
         } else if (fieldFlags == 0) {
         }
