@@ -22,12 +22,21 @@ std::string Disassembler::decodeRegister(uint32_t reg) const {
     return "r" + std::to_string(reg);
 }
 
-int32_t Disassembler::decodeSigned18(uint32_t immediateValue) const {
-    int32_t value = static_cast<int32_t>(immediateValue & 0x3FFFFu);
-    if (value & (1 << 17)) {
-        value |= static_cast<int32_t>(0xFFE00000u);
+std::string Disassembler::decodeWindowRegister(uint32_t reg) const {
+    // Restricted register window used by the privileged `movz` (matches the
+    // assembler's parseWindowRegister).
+    switch (reg) {
+        case 0: return "r0";
+        case 1: return "sp";
+        case 2: return "oldPC";
+        case 3: return "oldSP";
+        case 4: return "oldFlags";
+        case 5: return "eBase";
+        case 6: return "eCode";
+        default:
+            throw std::runtime_error("Error: invalid register-window operand " +
+                                     std::to_string(reg) + ".");
     }
-    return value;
 }
 
 std::string Disassembler::decodeImmediate(uint32_t immediateValue) const {
@@ -35,15 +44,13 @@ std::string Disassembler::decodeImmediate(uint32_t immediateValue) const {
     uint32_t payload = immediateValue & 0xFFFFu;
 
     if (modifierBits == 0b01u) {
-        return "u" + std::to_string(payload);
+        return "u" + std::to_string(payload);   // unsigned 16-bit
     }
     if (modifierBits == 0b10u) {
-        std::stringstream ss;
-        ss << "h" << std::hex << payload;
-        return ss.str();
+        return "h" + std::to_string(payload);   // value << 16 (decimal, like the assembler)
     }
 
-    return std::to_string(decodeSigned18(immediateValue));
+    return std::to_string(static_cast<int16_t>(payload));   // signed 16-bit
 }
 
 DecodedInstruction Disassembler::decodeInstruction(uint32_t instruction, uint32_t address, size_t index) const {
@@ -73,7 +80,11 @@ DecodedInstruction Disassembler::decodeInstruction(uint32_t instruction, uint32_
     uint32_t rs2 = (instruction >> 14) & 0x0Fu;
     uint32_t rawImmediate = instruction & 0x3FFFFu;
 
-    if (fieldFlags == (HAS_RD | HAS_RS1 | HAS_RS2)) {
+    if (mnemonic == "movz") {
+        // Both operands are register-window entries (r0, sp, oldPC, oldSP,
+        // oldFlags, eBase, eCode) packed into the rd and rs2 fields.
+        decoded.operands = decodeWindowRegister(rd) + ", " + decodeWindowRegister(rs2);
+    } else if (fieldFlags == (HAS_RD | HAS_RS1 | HAS_RS2)) {
         decoded.operands = decodeRegister(rd) + ", " + decodeRegister(rs1) + ", " + decodeRegister(rs2);
     } else if (fieldFlags == (HAS_RD | HAS_RS1 | HAS_IMM)) {
         decoded.operands = decodeRegister(rd) + ", " + decodeRegister(rs1) + ", " + decodeImmediate(rawImmediate);
@@ -88,13 +99,16 @@ DecodedInstruction Disassembler::decodeInstruction(uint32_t instruction, uint32_
     } else if (fieldFlags == (HAS_RS1 | HAS_RS2)) {
         decoded.operands = decodeRegister(rs1) + ", " + decodeRegister(rs2);
     } else if (fieldFlags == HAS_OFFSET) {
-        int32_t offset = static_cast<int32_t>(instruction & 0x3FFFFFFu);
-        if (offset & (1 << 25)) {
-            offset |= 0xFC000000;
+        // Branch-format: a 25-bit signed WORD offset in [24:0]; bit 25 is the
+        // dynamic prediction bit and is ignored here.
+        int32_t offset = static_cast<int32_t>(instruction & 0x1FFFFFFu);
+        if (offset & (1 << 24)) {
+            offset |= static_cast<int32_t>(0xFE000000u);
         }
         decoded.isBranch = true;
         decoded.branchOffset = offset;
-        decoded.targetAddress = static_cast<uint32_t>(address + 4 + offset);
+        decoded.targetAddress = static_cast<uint32_t>(
+            static_cast<int64_t>(address) + static_cast<int64_t>(offset) * 4);
         decoded.operands = std::to_string(offset);
     } else if (fieldFlags == 0) {
         decoded.operands.clear();

@@ -2,6 +2,7 @@
 #define DISASSEMBLER_H
 
 #include <bitset>
+#include <cstdint>
 #include <fstream>
 #include <string>
 #include <unordered_map>
@@ -41,8 +42,8 @@ private:
     static const std::unordered_map<instructionName, instructionDetails> instructionTable;
 
     std::string decodeRegister(uint32_t reg) const;
+    std::string decodeWindowRegister(uint32_t reg) const;
     std::string decodeImmediate(uint32_t immediateValue) const;
-    int32_t decodeSigned18(uint32_t immediateValue) const;
     DecodedInstruction decodeInstruction(uint32_t instruction, uint32_t address, size_t index) const;
 
 public:
