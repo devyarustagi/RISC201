@@ -1,0 +1,4 @@
+microasm
+
+# Assembler output artifacts
+*.rom

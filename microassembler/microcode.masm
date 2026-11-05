@@ -1,0 +1,142 @@
+# Microassembly for the RISC201 macroinstruction set.
+#
+# These are the microinstruction sequences from the
+# "Macroinstruction to Microinstruction Mapping" table in microinstructions.md,
+# one label per macroinstruction. Assemble with:
+#
+#     make test
+#
+# which builds ./microasm and writes build/microprograms.rom and
+# build/rom_address_table.rom.
+
+.nop
+    maddi s15, s15, 0
+
+.add
+    madd rd, rs1, rs2
+
+.sub
+    msub rd, rs1, rs2
+
+.mul
+    mmul rd, rs1, rs2
+
+.div
+    mdiv rd, rs1, rs2
+
+.mod
+    mmod rd, rs1, rs2
+
+.and
+    mand rd, rs1, rs2
+
+.or
+    mor rd, rs1, rs2
+
+.xor
+    mxor rd, rs1, rs2
+
+.lsl
+    mlsl rd, rs1, rs2
+
+.lsr
+    mlsr rd, rs1, rs2
+
+.asr
+    masr rd, rs1, rs2
+
+.not
+    mnot rd, rs1
+
+.mov
+    mmov rd, rs2
+
+.cmp
+    mcmp rs1, rs2
+
+.addi
+    maddi rd, rs1, imm
+
+.subi
+    msubi rd, rs1, imm
+
+.muli
+    mmuli rd, rs1, imm
+
+.divi
+    mdivi rd, rs1, imm
+
+.modi
+    mmodi rd, rs1, imm
+
+.andi
+    mandi rd, rs1, imm
+
+.ori
+    mori rd, rs1, imm
+
+.xori
+    mxori rd, rs1, imm
+
+.lsli
+    mlsli rd, rs1, imm
+
+.lsri
+    mlsri rd, rs1, imm
+
+.asri
+    masri rd, rs1, imm
+
+.movi
+    mmovi rd, imm
+
+.cmpi
+    mcmpi rs1, imm
+
+.ld
+    mld rd, rs1, imm
+
+.st
+    mst rd, rs1, imm
+
+.fadd
+    mfadd rd, rs1, rs2
+
+.fsub
+    mfsub rd, rs1, rs2
+
+.fmul
+    mfmul rd, rs1, rs2
+
+.fdiv
+    mfdiv rd, rs1, rs2
+
+.fcmp
+    mfcmp rs1, rs2
+
+.b
+    mb
+
+.beq
+    mbeq
+
+.bgt
+    mbgt
+
+.call
+    mcall
+
+.ret
+    mret
+
+.movz
+    mmovz rd, rs2
+
+.retz
+    mretz
+
+.ebreak
+    mebreak
+
+.ecall
+    mecall
