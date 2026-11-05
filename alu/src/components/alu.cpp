@@ -54,6 +54,7 @@ uint32_t Alu::Execute(AluOp op, uint32_t a, uint32_t b) {
         // Logic unit + pass-through.
         case AluOp::AND:  return a & b;
         case AluOp::OR:   return a | b;
+        case AluOp::XOR:  return a ^ b;
         case AluOp::NOT:  return ~a;  // not rd, rs1
         case AluOp::PASS: return a;   // mov rd, imm (A = macro immediate)
 

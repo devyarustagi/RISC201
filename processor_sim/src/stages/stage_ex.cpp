@@ -35,11 +35,13 @@ uint32_t forwardValue(uint32_t current, uint8_t reg,
     return current;
 }
 
-uint32_t selectOperandA(uint8_t select, uint32_t op1, const OfExPacket& in,
+uint32_t selectOperandA(uint8_t select, uint32_t op1, uint32_t op2, const OfExPacket& in,
                         const ScratchFile& scratch) {
     switch (select) {
         case A_CONST:   return static_cast<uint32_t>(in.control.microImm);
         case A_SCRATCH: return scratch.Read(in.control.src1ScratchAddr);
+        case A_OP2:     return op2;                               // mov / movz
+        case A_IMM:     return static_cast<uint32_t>(in.imm);     // movi
         case A_OP1:
         default:        return op1;
     }
@@ -87,7 +89,7 @@ ExResult StageEX::Run(const PipelineRegister<OfExPacket>& ofEx,
         op2 = forwardValue(in.op2, in.rs2, exMem.out, wb);
     }
 
-    const uint32_t a = selectOperandA(in.control.aluSrcA, op1, in, scratch);
+    const uint32_t a = selectOperandA(in.control.aluSrcA, op1, op2, in, scratch);
     const uint32_t b = selectOperandB(in.control.aluSrcB, op2, in, scratch);
     out.aluResult = alu.Execute(in.control.aluOp, a, b);
     out.op2 = op2;   // store data continues to MARW

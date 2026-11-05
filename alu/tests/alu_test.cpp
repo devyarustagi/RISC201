@@ -72,6 +72,7 @@ uint32_t reference(AluOp op, uint32_t a, uint32_t b) {
             return toUnsigned(sa % sb);
         case AluOp::AND:  return a & b;
         case AluOp::OR:   return a | b;
+        case AluOp::XOR:  return a ^ b;
         case AluOp::NOT:  return ~a;
         case AluOp::PASS: return a;
         case AluOp::LSL:  return a << (b & 31u);
@@ -118,7 +119,7 @@ struct OpCase {
 const OpCase kOps[] = {
     {AluOp::ADD, "add"},   {AluOp::SUB, "sub"},   {AluOp::CMP, "cmp"},
     {AluOp::MUL, "mul"},   {AluOp::DIV, "div"},   {AluOp::MOD, "mod"},
-    {AluOp::AND, "and"},   {AluOp::OR, "or"},     {AluOp::NOT, "not"},
+    {AluOp::AND, "and"},   {AluOp::OR, "or"},     {AluOp::XOR, "xor"},     {AluOp::NOT, "not"},
     {AluOp::PASS, "pass"}, {AluOp::LSL, "lsl"},   {AluOp::LSR, "lsr"},
     {AluOp::ASR, "asr"},   {AluOp::FADD, "fadd"}, {AluOp::FSUB, "fsub"},
     {AluOp::FMUL, "fmul"}, {AluOp::FDIV, "fdiv"}, {AluOp::FCMP, "fcmp"},

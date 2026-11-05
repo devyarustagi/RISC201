@@ -36,25 +36,46 @@ void Cpu::Reset() {
     mispredicts_ = 0;
     dataStalls_ = 0;
     exceptions_ = 0;
+    retired_ = 0;
     interruptPending_ = false;
+    debugStopped_ = false;
+    lastRetired_ = RetireInfo{};
 }
 
 void Cpu::Step() {
     if (halted_) {
         return;
     }
+    debugStopped_ = false;
+
+    // Snapshot of the packet about to leave the pipeline (debugger view).
+    const ExMemPacket retiring = exMem_.out;
 
     // 1. Memory / writeback consumes the oldest packet. A marked instruction
     //    drains here: its commit signals are suppressed and the exception is
     //    reported. Also runs the predictor inversion unit.
     const MarwResult marw = stageMarw_.Run(exMem_, gpr_, memory_, special_);
 
-    // 2. Execute: forward operands, run the ALU, resolve the branch.
-    const ExResult ex = stageEx_.Run(ofEx_, exMem_, marw.wb, scratch_, alu_);
+    // 2. Execute: forward operands, run the ALU, resolve the branch. When an
+    //    exception commits this cycle the instruction in EX is younger and is
+    //    flushed, so EX does not run: it must not change the flags or the
+    //    Scratch File (precise exceptions).
+    ExResult ex;
+    if (marw.exception) {
+        exMem_.in = ExMemPacket{};
+    } else {
+        ex = stageEx_.Run(ofEx_, exMem_, marw.wb, scratch_, alu_);
+    }
 
     // 3. Operand fetch: decode, drive the microsequencer and the RAS. The branch
     //    lock (a misprediction) gates the RAS call/ret enables.
-    const OfResult of = stageOf_.Run(ifOf_, ofEx_, gpr_, control_, special_, ex.mispredict);
+    //    The RAS is also locked while an older instruction is marked (it is
+    //    committing its exception now, or was just marked in EX): the
+    //    instruction in OF will be flushed, so its call / ret must not touch
+    //    the stack.
+    const bool olderMarked = marw.exception || exMem_.in.isException;
+    const OfResult of = stageOf_.Run(ifOf_, ofEx_, gpr_, control_, special_,
+                                     ex.mispredict || olderMarked);
 
     // 4. Data Lock Unit: a load in EX whose rd is read by the instruction in OF.
     const bool loadUse = ofEx_.out.valid && ofEx_.out.control.isLd &&
@@ -66,7 +87,14 @@ void Cpu::Step() {
 
     // 5. Fetch: main PC mux (exception > mispredict > retz > ret > stall).
     IfControl ctl;
-    if (marw.exception) {
+    const bool trapped = marw.exception && debugTrap_ && debugTrap_(marw.pc, marw.cause);
+    if (trapped) {
+        // Debug trap: flush like an exception, but no context switch; fetch
+        // restarts at the trapping instruction once the debugger resumes.
+        ctl.exception = true;
+        ctl.exceptionPC = marw.pc;
+        debugStopped_ = true;
+    } else if (marw.exception) {
         // Context switch: capture oldPC / eCode / oldFlags and drop to OS mode.
         special_.EnterException(marw.pc, marw.cause, marw.flagE, marw.flagGt, marw.flagLt);
         ctl.exception = true;
@@ -93,7 +121,9 @@ void Cpu::Step() {
     if (marw.exception) {
         exMem_.in = ExMemPacket{};
         ofEx_.in = OfExPacket{};
-        ++exceptions_;
+        if (!trapped) {
+            ++exceptions_;
+        }
     } else if (ex.mispredict) {
         ofEx_.in = OfExPacket{};
         ++mispredicts_;
@@ -105,8 +135,28 @@ void Cpu::Step() {
         interruptPending_ = false;
     }
 
-    if (ex.halt) {
+    if (ex.halt && !marw.exception) {
         halted_ = true;
+    }
+
+    // Record what left the pipeline this cycle.
+    lastRetired_ = RetireInfo{};
+    if (retiring.valid) {
+        lastRetired_.valid = true;
+        lastRetired_.pc = retiring.pc;
+        lastRetired_.instruction = retiring.instruction;
+        lastRetired_.exception = marw.exception;
+        lastRetired_.cause = marw.exception ? marw.cause : static_cast<uint8_t>(EXC_NONE);
+        lastRetired_.trapped = trapped;
+        if (!marw.exception) {
+            ++retired_;
+            lastRetired_.wroteGpr = marw.wb.wb;
+            lastRetired_.rd = marw.wb.dest;
+            lastRetired_.value = marw.wb.value;
+            lastRetired_.stored = retiring.control.isSt;
+            lastRetired_.storeAddress = retiring.aluResult & ~0x3u;
+            lastRetired_.storeValue = retiring.op2;
+        }
     }
 
     // Rising edge: all state-holding elements latch.
@@ -132,6 +182,7 @@ void Cpu::DumpState(std::ostream& out) const {
     out << "final PC        : " << stageIf_.Pc() << '\n';
     out << "mispredictions  : " << mispredicts_ << '\n';
     out << "load-use stalls : " << dataStalls_ << '\n';
+    out << "instructions    : " << retired_ << '\n';
     out << "exceptions      : " << exceptions_ << '\n';
     out << "CPL             : " << static_cast<int>(special_.Cpl()) << '\n';
     out << "eCode           : " << static_cast<int>(special_.ECode()) << '\n';

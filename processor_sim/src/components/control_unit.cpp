@@ -128,8 +128,11 @@ ControlSignals ControlUnit::decode(const Microinstruction& micro) const {
         case MicroOp::MCMPI: case MicroOp::MCMP:
             control.aluOp = AluOp::CMP; break;  // flags only
         case MicroOp::MMOV: case MicroOp::MMOVI:
-            // Operand move: the ALU passes the B operand (op2 or the immediate).
-            control.aluOp = AluOp::PASS; writeDst(); break;
+            // Operand move: the ALU's PASS returns operand A, so the A mux
+            // selects op2 (mov rd, rs2) or the macro immediate (movi rd, imm).
+            control.aluOp = AluOp::PASS;
+            control.aluSrcA = immediateForm ? A_IMM : A_OP2;
+            writeDst(); break;
         case MicroOp::MLD:
             control.aluOp = AluOp::ADD;
             control.isLd = true; writeDst(); break;
@@ -162,6 +165,7 @@ ControlSignals ControlUnit::decode(const Microinstruction& micro) const {
             // Privileged move: pass the window source; the MARW stage routes the
             // result to the windowed destination (control.movzDst).
             control.aluOp = AluOp::PASS;
+            control.aluSrcA = A_OP2;
             control.aluSrcB = B_OP2;
             control.isMovz = true;
             break;
@@ -169,6 +173,7 @@ ControlSignals ControlUnit::decode(const Microinstruction& micro) const {
             control.isRetz = true; break;
         case MicroOp::MEBREAK:
         case MicroOp::MECALL:
+        case MicroOp::MNOP:
             break;   // no datapath effect; the OF stage marks the exception
         default:
             break;

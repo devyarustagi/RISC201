@@ -39,6 +39,7 @@ const OpInfo kOps[] = {
     {"mod", AluOp::MOD, Kind::Int, Kind::Int, false, "mod", "Non-restoring divider (isMod: remainder)"},
     {"and", AluOp::AND, Kind::Int, Kind::Int, false, "&", "Logic unit"},
     {"or", AluOp::OR, Kind::Int, Kind::Int, false, "|", "Logic unit"},
+    {"xor", AluOp::XOR, Kind::Int, Kind::Int, false, "^", "Logic unit"},
     {"not", AluOp::NOT, Kind::Int, Kind::Int, true, "~", "Logic unit"},
     {"lsl", AluOp::LSL, Kind::Int, Kind::Int, false, "<<", "Barrel shifter (bit-reversed)"},
     {"lsr", AluOp::LSR, Kind::Int, Kind::Int, false, ">>", "Barrel shifter (fill 0)"},

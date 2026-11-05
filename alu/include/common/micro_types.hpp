@@ -126,6 +126,7 @@ enum class AluOp {
     ADD, SUB, MUL, DIV, AND, OR, LSL, LSR, ASR, NOT, CMP,
     FADD, FSUB, FMUL, FDIV, FCMP, PASS,
     MOD,   // remainder from the divider (isMod)
+    XOR,   // bitwise exclusive-or (logic unit)
     ITOF,  // int32 -> float (FPU convert)
     FTOI   // float -> int32 (FPU convert)
 };

@@ -57,6 +57,9 @@ public:
              const IfControl& ctl);
 
     uint32_t Pc() const { return pc_; }
+
+    /** @brief Overrides the program counter (debugger resume). */
+    void SetPc(uint32_t pc) { pc_ = pc; }
 };
 
 #endif

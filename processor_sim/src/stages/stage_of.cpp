@@ -119,12 +119,14 @@ OfResult StageOF::Run(const PipelineRegister<IfOfPacket>& ifOf,
     }
 
     // RAS: push ID_PC + 4 on a call, pop on a ret, both gated by the branch lock.
-    ras_.Run(out.control.isCall, out.control.isRet, branchLock, in.pc + 4);
+    // An instruction already marked in IF (interrupt) never commits, so it is
+    // locked out of the RAS as well.
+    ras_.Run(out.control.isCall, out.control.isRet, branchLock || in.isException, in.pc + 4);
     result.rasOut = ras_.Out();
 
     // Exception Unit marking (OF stage). An asynchronous mark set in IF is
     // superseded only by a synchronous exception on this instruction.
-    uint8_t cause = out.isException ? out.cause : EXC_NONE;
+    uint8_t cause = out.isException ? out.cause : static_cast<uint8_t>(EXC_NONE);
     if (!out.isException) {
         cause = ofExceptionCause(opcode, special);
         if (cause == EXC_NONE && out.control.isCall && ras_.OverflowPending()) {

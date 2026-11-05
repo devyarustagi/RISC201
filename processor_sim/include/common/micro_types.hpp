@@ -118,6 +118,8 @@ constexpr uint8_t MMOVZ = 0x28;   // movz rd, rs2 (windowed, register form)
 constexpr uint8_t MRETZ = 0x29;   // retz
 constexpr uint8_t MEBREAK = 0x2A; // ebreak
 constexpr uint8_t MECALL  = 0x2B; // ecall
+// No datapath effect (nop, and every opcode the address table does not map).
+constexpr uint8_t MNOP    = 0x3E;
 }  // namespace MicroOp
 
 // A decoded microinstruction, read out of the microprogram ROM.
@@ -153,8 +155,10 @@ enum class AluOp {
     FTOI   // float -> int32 (FPU convert)
 };
 
-// ALU A-operand select (op1 / constant-from-ROM / scratch-A).
-enum AluSrcA : uint8_t { A_OP1 = 0, A_CONST = 1, A_SCRATCH = 2 };
+// ALU A-operand select (op1 / constant-from-ROM / scratch-A / op2 / macro imm).
+// mov, movi and movz route their single operand onto A (the ALU's PASS and NOT
+// read A), so the A mux also has the op2 and immediate inputs.
+enum AluSrcA : uint8_t { A_OP1 = 0, A_CONST = 1, A_SCRATCH = 2, A_OP2 = 3, A_IMM = 4 };
 // ALU B-operand select.
 enum AluSrcB : uint8_t { B_OP2 = 0, B_IMM = 1, B_CONST = 2, B_SCRATCH = 3 };
 
