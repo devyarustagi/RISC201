@@ -1,6 +1,6 @@
 // RISC201 processor simulator - command-line entry point.
 //
-//   processor_sim <program.bin> [options]
+//   processor_sim4 <program.bin> [options]
 //
 //   --rom <file>          microprogram ROM      (default build/microprograms.rom)
 //   --table <file>        ROM address table     (default build/rom_address_table.rom)
@@ -27,7 +27,7 @@
 namespace {
 
 void usage() {
-    std::cerr << "usage: processor_sim <program.bin> [--rom <file>] [--table <file>]\n"
+    std::cerr << "usage: processor_sim4 <program.bin> [--rom <file>] [--table <file>]\n"
                  "                     [--max-cycles <n>] [--trace] [--debug] [--script <file>] [--tui]\n";
 }
 
@@ -107,7 +107,7 @@ int main(int argc, char** argv) {
         cpu.DumpState(std::cout);
         return cpu.Halted() ? EXIT_SUCCESS : 2;   // 2: cycle limit reached
     } catch (const std::exception& e) {
-        std::cerr << "processor_sim: " << e.what() << '\n';
+        std::cerr << "processor_sim4: " << e.what() << '\n';
         return EXIT_FAILURE;
     }
 }

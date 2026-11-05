@@ -13,7 +13,7 @@ You need a C++17 compiler, `make`, ncurses (preinstalled on macOS; on Ubuntu
 `sudo apt install libncurses-dev`) and `python3` for `make test`.
 
 ```sh
-cd processor_sim
+cd processor_sim4
 make                    # simulator, microcode ROMs, assembler, test programs
 make test               # 18 checks, all should pass
 make debug PROG=exceptions   # command-line debugger
@@ -22,7 +22,7 @@ make tui PROG=stack          # full-screen debugger
 
 To debug your own program, write it in assembly, assemble it with
 `./build/assembler my.asm -o my.bin`, end it with `HALT: b HALT`, and run
-`./build/processor_sim my.bin --tui`.
+`./build/processor_sim4 my.bin --tui`.
 
 ## Summary
 
@@ -30,7 +30,7 @@ The RISC201 simulator now runs end to end and has an interactive debugger. All
 tests pass: 6 programs in batch mode, the same 6 with a breakpoint on every
 instruction, and 6 recorded debugger sessions.
 
-- **Debugger** (`processor_sim/src/debugger/`, `main.cpp`): step by cycle or by
+- **Debugger** (`processor_sim4/src/debugger/`, `main.cpp`): step by cycle or by
   instruction, run, continue, software breakpoints through `ebreak`, hardware
   breakpoints, `catch` for each exception, watchpoints, and views for registers,
   memory, disassembly, pipeline and the special registers. It can also raise an
@@ -38,7 +38,7 @@ instruction, and 6 recorded debugger sessions.
 
 | Folder | What is in it |
 |---|---|
-| `processor_sim/` | Simulator, debugger, Makefile, microcode source, tests |
+| `processor_sim4/` | Simulator, debugger, Makefile, microcode source, tests |
 | `microassembler/` | New: turns `microcode.masm` into the control-store ROMs |
 | `assembler/`, `disassembler/` | Copied unchanged from `sujaan/disassembler` (they match the simulator's encoding) |
 | `alu/` | Standalone ALU and its tests (XOR added) |
@@ -167,7 +167,7 @@ Type `help` inside rdb for the same list. Numbers can be decimal, `0x` hex or `0
 Command-line options:
 
 ```
-processor_sim <program.bin> [--debug] [--script <file>] [--tui] [--trace]
+processor_sim4 <program.bin> [--debug] [--script <file>] [--tui] [--trace]
               [--max-cycles <n>] [--rom <file>] [--table <file>]
 ```
 
@@ -177,7 +177,7 @@ each one, which is how the test sessions and a repeatable demo work.
 
 ## Full-screen view (--tui)
 
-`make tui PROG=stack` (or `processor_sim <program.bin> --tui`) opens the same
+`make tui PROG=stack` (or `processor_sim4 <program.bin> --tui`) opens the same
 debugger as a full-screen terminal view, laid out like btop. It needs a terminal
 of at least 80x20.
 
@@ -216,7 +216,7 @@ The team's control unit is microprogrammed. It loads two ROM files:
 
 Result: 44 microinstructions, 209 bytes. Every instruction executes through the control store.
 
-## Test programs (`processor_sim/tests/programs/`)
+## Test programs (`processor_sim4/tests/programs/`)
 
 `make test` runs each program in batch mode and again with a breakpoint on every
 instruction (the results must match), then replays 6 recorded debugger sessions.

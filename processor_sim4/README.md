@@ -1,4 +1,4 @@
-# processor_sim — RISC201 pipeline simulator and debugger (rdb)
+# processor_sim4 — RISC201 pipeline simulator and debugger (rdb)
 
 4-stage pipelined RISC201 CPU (IF → OF → EX → MA-RW) with a microprogrammed
 control unit, precise exceptions (see `../exceptions.md`) and an interactive
@@ -7,7 +7,7 @@ command-line debugger.
 ## Build and test
 
 ```sh
-cd processor_sim
+cd processor_sim4
 make            # simulator, microcode ROMs, assembler, test programs (into build/)
 make test       # batch runs + breakpoint-on-every-instruction + debugger sessions
 ```
@@ -18,15 +18,15 @@ make test       # batch runs + breakpoint-on-every-instruction + debugger sessio
 | :--- | :--- | :--- |
 | microassembler | `../microassembler/microassembler.cpp` | `build/microprograms.rom`, `build/rom_address_table.rom` from `samples/microcode.masm` |
 | assembler | `../assembler/` | `build/programs/*.bin` from `tests/programs/*.asm` |
-| simulator | `main.cpp`, `src/` | `build/processor_sim` |
+| simulator | `main.cpp`, `src/` | `build/processor_sim4` |
 
 ## Run
 
 ```sh
-./build/processor_sim build/programs/breakpoints.bin            # run to halt, print final state
-./build/processor_sim build/programs/breakpoints.bin --trace    # one line per cycle
-./build/processor_sim build/programs/exceptions.bin --debug     # interactive debugger
-./build/processor_sim build/programs/exceptions.bin --script tests/scripts/3_exceptions.rdb
+./build/processor_sim4 build/programs/breakpoints.bin            # run to halt, print final state
+./build/processor_sim4 build/programs/breakpoints.bin --trace    # one line per cycle
+./build/processor_sim4 build/programs/exceptions.bin --debug     # interactive debugger
+./build/processor_sim4 build/programs/exceptions.bin --script tests/scripts/3_exceptions.rdb
 make debug PROG=interrupt                                        # shortcut for --debug
 ```
 
@@ -38,7 +38,7 @@ A program halts on a branch to itself (`HALT: b HALT`).
 ## Full-screen debugger (`--tui`)
 
 ```sh
-make tui PROG=stack          # or: ./build/processor_sim build/programs/stack.bin --tui
+make tui PROG=stack          # or: ./build/processor_sim4 build/programs/stack.bin --tui
 ```
 
 A btop-style view built on ncurses (`-lncurses`, preinstalled on macOS and most Linux;

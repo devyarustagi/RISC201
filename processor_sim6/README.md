@@ -2,7 +2,7 @@
 
 A cycle-accurate simulator of the 6-stage datapath in
 [`../6StagePipeline.svg`](../6StagePipeline.svg), with the same debugger (`rdb`)
-and btop-style full-screen view as the 4-stage `processor_sim/`. It uses the
+and btop-style full-screen view as the 4-stage `processor_sim4/`. It uses the
 team's components unchanged (ALU, microcoded Control Unit, Register File, RAS,
 Scratch File, memory) and the same microcode, assembler and test programs.
 
@@ -16,11 +16,11 @@ make                         # simulator, microcode ROMs, assembler, test progra
 make test                    # 21 checks, all should pass
 make debug PROG=hazards      # command-line debugger
 make tui PROG=stack          # full-screen debugger
-./build/processor_sim build/programs/hazards.bin --trace   # one line per cycle
+./build/processor_sim6 build/programs/hazards.bin --trace   # one line per cycle
 ```
 
 Requirements and every debugger command and key are the same as in
-`../processor_sim/` (see its README and DEBUGGER_README).
+`../processor_sim4/` (see its README and DEBUGGER_README).
 
 ## The six stages
 

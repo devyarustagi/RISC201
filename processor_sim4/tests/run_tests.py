@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Test runner for processor_sim and the rdb debugger.
+"""Test runner for processor_sim4 and the rdb debugger.
 
-Run from processor_sim/ (make test does this):
+Run from processor_sim4/ (make test does this):
 
   1. Batch tests: every tests/programs/*.asm has an '# expect:' line
      (rN=value, sp=value, mem[addr]=value); the program is run to halt and the
@@ -18,7 +18,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-SIM = "build/processor_sim"
+SIM = "build/processor_sim4"
 ROOT = Path(__file__).resolve().parent
 
 

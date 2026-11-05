@@ -17,7 +17,7 @@ BUILD    := build
 
 SIM_SRCS := main.cpp $(wildcard src/components/*.cpp src/stages/*.cpp src/core/*.cpp src/debugger/*.cpp)
 SIM_OBJS := $(patsubst %.cpp,$(BUILD)/obj/%.o,$(SIM_SRCS))
-SIM      := $(BUILD)/processor_sim
+SIM      := $(BUILD)/processor_sim6
 
 MASM     := $(BUILD)/microassembler
 ROM      := $(BUILD)/microprograms.rom
