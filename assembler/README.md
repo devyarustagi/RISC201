@@ -1,0 +1,290 @@
+# RISC201 Assembler
+
+This directory contains the assembler for the RISC201 instruction set used in the course project.
+
+## Overview
+
+The assembler reads an assembly source file, performs a two-pass translation, and writes the resulting machine code to a binary output file.
+
+It supports:
+- instruction mnemonics and opcode mapping
+- labels and symbol resolution
+- register parsing for `r0` through `r15`
+- immediate values, modifier bits, and symbolic branch offsets
+- comma-separated operand lists and validation
+- output binary generation in 32-bit instruction words
+
+## Basic instruction syntax examples
+
+The assembler expects a consistent syntax pattern based on the ISA format.
+
+### 1. Register-register arithmetic
+
+```asm
+add r3, r4, r5
+sub r3, r4, r5
+mul r3, r4, r5
+mod r3, r4, r5
+and r3, r4, r5
+xor r3, r4, r5
+```
+
+Pattern:
+
+```asm
+<mnemonic> rd, rs1, rs2
+```
+
+### 2. Register-immediate arithmetic
+
+```asm
+addi r1, r2, 8
+subi r1, r2, 4
+muli r1, r2, 16
+```
+
+Pattern:
+
+```asm
+<mnemonic> rd, rs1, imm
+```
+
+### 3. Move and compare operations
+
+```asm
+mov r1, r0
+movi r0, h123
+cmp r1, r2
+cmpi r1, 7
+```
+
+Pattern:
+
+```asm
+mov rd, rs2
+movi rd, imm
+cmp rs1, rs2
+cmpi rs1, imm
+```
+
+### 4. Unary operations
+
+```asm
+not r1, r2
+```
+
+Pattern:
+
+```asm
+not rd, rs1
+```
+
+### 5. Branches and jumps
+
+```asm
+b L1
+beq target
+bgt target
+call func
+ret
+```
+
+Pattern:
+
+```asm
+<mnemonic> label_or_offset
+```
+
+The offset is a signed **word** offset relative to the branch's own PC: a label
+resolves to `(label - PC) / 4`, and the hardware computes `PC + (offset << 2)`.
+The offset occupies bits `[24:0]` (25-bit signed); bit `[25]` is left clear for
+the processor's dynamic branch-prediction bit.
+
+### 6. Memory operations
+
+```asm
+ld r1, r2, 4
+st r1, r2, 8
+```
+
+Pattern:
+
+```asm
+ld rd, rs1, imm
+st rd, rs1, imm
+```
+
+### 7. Stack pseudo-operation
+
+```asm
+PUSH r0
+POP r1
+```
+
+These assembler pseudo-operations expand into equivalent instruction
+sequences:
+
+```asm
+# PUSH r0
+subi r14, r14, 4
+st  r0, r14, 0
+
+# POP r1
+ld  r1, r14, 0
+addi r14, r14, 4
+```
+
+`r14` is the stack pointer alias (`sp`). `PUSH` decrements it by 4 bytes before
+storing the register; `POP` loads from the current top before incrementing it.
+
+### 8. Privileged / exception instructions
+
+```asm
+movz eBase, sp
+movz oldPC, sp
+movz oldSP, sp
+retz
+ebreak
+ecall
+```
+
+- `movz <dst>, <src>` — privileged move through the restricted register window
+  (`r0`, `sp`, `oldPC`, `oldSP`, `oldFlags`, `eBase`, `eCode`). Both operands are
+  window entries, not `r0`-`r15`.
+- `retz` — privileged return from exception (`PC <- oldPC`, `CPL <- 1`).
+- `ebreak` / `ecall` — user-mode instructions that raise `pbrk` / `scall`.
+
+`sp` is an alias for `r14` and may be used anywhere a register is expected.
+There is no link register: `call`/`ret` return addresses are handled entirely by
+the processor's RAS.
+
+### Symbolic immediates
+
+A bare label used where an I-format immediate is expected resolves to its
+absolute address, e.g. loading a handler base:
+
+```asm
+movi sp, trap
+movz eBase, sp
+```
+
+## Basic flow: how the assembler works
+
+The assembler follows a two-pass pipeline:
+
+### First pass
+
+1. Open the assembly source file.
+2. Read each line one by one.
+3. Remove comments starting with `#`.
+4. Detect labels such as `L:` and store them in the symbol table.
+5. Record the instruction location and build an intermediate representation (IR).
+6. Validate syntax, operand count, and comma placement.
+
+At the end of pass 1, the assembler knows:
+- all label addresses
+- instruction order
+- operand list for each instruction
+
+### Second pass
+
+1. Process each IR entry in order.
+2. Look up the opcode from the instruction table.
+3. Parse each operand:
+   - register names (`r0`...`r15`)
+   - immediates (plain signed, or `u`/`h` modifier forms)
+   - branch offsets (a label, or a literal signed word offset)
+4. Pack the opcode, registers, and immediate bits into a 32-bit instruction word.
+5. Write the instruction to the output binary file.
+
+This yields the final machine code that the processor can execute.
+
+## Immediate field format with modifier bits
+
+Every I-format instruction carries an 18-bit immediate laid out as
+`[17:16] modifier | [15:0] value`:
+
+| Modifier | Written as | Meaning |
+| :---: | :--- | :--- |
+| `00` | `5`, `-1` | signed 16-bit (range -32768..32767), sign-extended |
+| `01` | `u10` | unsigned 16-bit (range 0..65535), zero-extended |
+| `10` | `h123` | the 16-bit value shifted left by 16 |
+
+Examples:
+
+```asm
+addi r1, r2, 5     # signed 16-bit:    5
+addi r1, r2, u10   # unsigned 16-bit:  10
+addi r1, r2, h123  # high half: 0x123 << 16
+```
+
+Modifier `11` is never produced; a plain immediate outside -32768..32767 is
+rejected. Microinstructions do **not** use these modifiers.
+
+
+## Build
+
+From this folder, compile the project with:
+
+```bash
+g++ -std=c++17 assembler.cpp assemblerPasses.cpp assemblerTokenizer.cpp instructionTable.cpp parseOperands.cpp main.cpp stringTrim.cpp -o riscasm
+```
+
+## Usage
+
+```bash
+./riscasm input.asm -o output.bin
+```
+
+Or, if you omit the output file:
+
+```bash
+./riscasm input.asm
+```
+
+This writes the assembled machine code to:
+
+```bash
+a.bin
+```
+
+## Example
+
+Input file (`a.asm`):
+
+```asm
+movi r0, h123
+mov r1, r0
+cmpi r1, h123
+beq L
+
+R:
+add r3, r4, r5
+sub r3, r4, r5
+
+L:
+add r0, r1, r2
+sub r0, r1, r2
+```
+
+Output file (`a.bin`) contains the assembled 32-bit instructions generated by the assembler.
+
+## Project structure
+
+- `main.cpp` — command-line entry point
+- `assembler.hpp` — class definition and shared data structures
+- `assembler.cpp` — constructor and top-level `Assemble()` entry
+- `instructionTable.cpp` — instruction opcode and field metadata
+- `assemblerTokenizer.cpp` — source line parsing, labels and IR generation
+- `parseOperands.cpp` — register, immediate and branch-offset parsing
+- `assemblerPasses.cpp` — first-pass and second-pass assembly logic
+- `stringTrim.{hpp,cpp}` — whitespace trimming helpers
+- `example.asm` — sample assembly input
+
+## Notes
+
+This assembler follows a two-pass design:
+1. first pass: resolve labels and record instruction layout
+2. second pass: encode the final 32-bit instructions
+
+The generated output is written as raw binary, one instruction per 32-bit word.

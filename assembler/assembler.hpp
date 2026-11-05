@@ -1,0 +1,63 @@
+#ifndef ASSEMBLER_H
+#define ASSEMBLER_H
+
+#include <fstream>
+#include <string>
+#include <vector>
+#include <unordered_map>
+#include <bitset>
+#include <cstdint>
+
+#define MAX_LINE_LEN 256
+#define HAS_RD 1
+#define HAS_RS1 2
+#define HAS_RS2 4
+#define HAS_IMM 8
+#define HAS_OFFSET 16
+
+// this bitset is packed as | offset | immediate | rs2 | rs1 | rd | ;
+// where each bit is set if the corresponding field is present in the instruction 
+using instructionFields = std::bitset<5>;
+using instructionName = std::string;
+using instructionOpcode = std::bitset<6>;
+
+struct instructionDetails {
+    instructionOpcode opcode;
+    instructionFields fields;
+};
+
+// Intermediate representation
+struct instructionIR {
+    uint32_t address;
+    instructionName mnemonic;
+    std::vector<std::string> operands;
+    int lineNumber;
+};
+
+class Assembler {
+
+private:
+    int lineNumber{0};
+    uint32_t lc{0};
+    std::ifstream inputFile;
+    std::ofstream outputFile;
+    static const std::unordered_map<instructionName, instructionDetails> instructionTable;
+
+private:
+    void tokenizer(std::string&);
+    std::vector<instructionIR> irList;
+    std::unordered_map<std::string, uint32_t> symbolTable;
+    void firstPass();
+    void secondPass();
+    uint32_t parseRegister(const std::string&, int);
+    uint32_t parseWindowRegister(const std::string&, int);
+    int32_t parseImmediateOrSymbol(const std::string&, uint32_t, int);
+    int32_t parseBranchOffset(const std::string&, uint32_t, int);
+
+public :
+    Assembler(const std::string& inputFilePath, const std::string& outputFilePath);
+    void Assemble();
+    
+};
+
+#endif
