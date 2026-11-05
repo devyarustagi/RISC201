@@ -1,0 +1,69 @@
+# RISC201 microcode (vertical format), assembled by ../microassembler.
+#
+#   <macro>:  <micro-op> [dst=..] [src1=..] [src2=..] [imm=..]
+#
+# Every RISC201 instruction maps to a single micro-op: the 4-stage pipeline
+# already supplies the operands (OF) and the writeback (MA-RW), so one control
+# word per instruction is enough. Fields left out default to the macro
+# instruction's own rd / rs1 / rs2. Even micro-ops take op2 as the second ALU
+# operand, odd ones take the macro immediate.
+#
+# `nop` must be first: address 0 is also where an opcode outside the address
+# table starts (the OF stage marks such an instruction wrongInst).
+
+nop:     mnop
+
+# ALU, register form: rd = rs1 op rs2
+add:     madd
+sub:     msub
+mul:     mmul
+div:     mdiv
+mod:     mmod
+and:     mand
+or:      mor
+xor:     mxor
+lsl:     mlsl
+lsr:     mlsr
+asr:     masr
+not:     mnot            # rd = ~rs1
+mov:     mmov            # rd = rs2  (A mux selects op2)
+cmp:     mcmp            # flags only
+
+# ALU, immediate form: rd = rs1 op imm
+addi:    maddi
+subi:    msubi
+muli:    mmuli
+divi:    mdivi
+modi:    mmodi
+andi:    mandi
+ori:     mori
+xori:    mxori
+lsli:    mlsli
+lsri:    mlsri
+asri:    masri
+movi:    mmovi           # rd = imm  (A mux selects the immediate)
+cmpi:    mcmpi
+
+# Memory: address = rs1 + imm
+ld:      mld
+st:      mst
+
+# Floating point (IEEE-754 single precision in the ALU's FPU)
+fadd:    mfadd
+fsub:    mfsub
+fmul:    mfmul
+fdiv:    mfdiv
+fcmp:    mfcmp
+
+# Control flow
+b:       mb
+beq:     mbeq
+bgt:     mbgt
+call:    mcall           # return address goes to the RAS
+ret:     mret
+
+# Privileged / exceptions (see exceptions.md)
+movz:    mmovz
+retz:    mretz
+ebreak:  mebreak         # OF marks pbrk
+ecall:   mecall          # OF marks scall

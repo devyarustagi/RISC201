@@ -1,0 +1,132 @@
+rdb - RISC201 pipeline debugger. Program: build/programs/breakpoints.bin (12 instructions). Type 'help'.
+(rdb) # program: breakpoints
+(rdb) # Cycle-by-cycle stepping through the pipeline, the load-use stall, hbreak, next.
+(rdb) step
+cycle 1   next fetch 0x0004   CPL 0   flags E:0 GT:0 LT:0   RAS depth 0
+  IF/IBU  0x0000  movi r1, 1                (fetched, decoded next)
+  IBU/RF  (bubble)
+  RF/EX   (bubble)
+  EX/MA   (bubble)
+  MA/RW   (bubble)
+  retired   (nothing)
+(rdb) step
+cycle 2   next fetch 0x0008   CPL 0   flags E:0 GT:0 LT:0   RAS depth 0
+  IF/IBU  0x0004  movi r2, 10               (fetched, decoded next)
+  IBU/RF  0x0000  movi r1, 1                ALU PASS -> r1  imm=1
+  RF/EX   (bubble)
+  EX/MA   (bubble)
+  MA/RW   (bubble)
+  retired   (nothing)
+(rdb) step 3
+cyc    3 | IF 0x000c | IBU 0x0008 movi  | RF 0x0004 movi  | EX 0x0000 movi  | MA -            | RW -            | retired (nothing)
+cyc    4 | IF 0x0010 | IBU 0x000c add   | RF 0x0008 movi  | EX 0x0004 movi  | MA 0x0000 movi  | RW -            | retired (nothing)
+cyc    5 | IF 0x0014 | IBU 0x0010 addi  | RF 0x000c add   | EX 0x0008 movi  | MA 0x0004 movi  | RW 0x0000 movi  | retired (nothing)
+cycle 5   next fetch 0x0014   CPL 0   flags E:0 GT:0 LT:0   RAS depth 0
+  IF/IBU  0x0010  addi r1, r1, 1            (fetched, decoded next)
+  IBU/RF  0x000c  add r3, r3, r1            ALU ADD -> r3  imm=0
+  RF/EX   0x0008  movi r3, 0                ALU PASS -> r3  read op1=0 op2=0
+  EX/MA   0x0004  movi r2, 10               ALU PASS -> r2  result=10
+  MA/RW   0x0000  movi r1, 1                ALU PASS -> r1  result=1
+  retired   (nothing)
+(rdb) hbreak 0x24
+Hardware breakpoint 1 at 0x0024: ld r4, r0, 256
+(rdb) continue
+Hardware breakpoint 1 at 0x0024 fetched: ld r4, r0, 256   (cycle 10)
+Next fetch => 0x0028: addi r5, r4, 1
+(rdb) step 4
+cyc   11 | IF 0x000c | IBU -            | RF -            | EX -            | MA 0x001c b     | RW 0x0018 bgt   | retired 0x0014  cmp r1, r2
+cyc   12 | IF 0x0010 | IBU 0x000c add   | RF -            | EX -            | MA -            | RW 0x001c b     | retired 0x0018  bgt 0x0020
+cyc   13 | IF 0x0014 | IBU 0x0010 addi  | RF 0x000c add   | EX -            | MA -            | RW -            | retired 0x001c  b 0x000c
+cyc   14 | IF 0x0018 | IBU 0x0014 cmp   | RF 0x0010 addi  | EX 0x000c add   | MA -            | RW -            | retired (nothing)
+cycle 14   next fetch 0x0018   CPL 0   flags E:0 GT:0 LT:1   RAS depth 0
+  IF/IBU  0x0014  cmp r1, r2                (fetched, decoded next)
+  IBU/RF  0x0010  addi r1, r1, 1            ALU ADD -> r1  imm=1
+  RF/EX   0x000c  add r3, r3, r1            ALU ADD -> r3  read op1=1 op2=2
+  EX/MA   (bubble)
+  MA/RW   (bubble)
+  retired   (nothing)
+(rdb) next 2
+retired  0x0010  addi r1, r1, 1   r1 <- 3
+(rdb) stats
+cycles           18
+instructions     10
+CPI              1.80
+mispredictions   1
+stall cycles     0
+exceptions taken 0
+halted           no
+(rdb) delete
+Deleted all breakpoints and watchpoints.
+(rdb) trace on
+trace on
+(rdb) run
+cyc    1 | IF 0x0004 | IBU 0x0000 movi  | RF -            | EX -            | MA -            | RW -            | retired (nothing)
+cyc    2 | IF 0x0008 | IBU 0x0004 movi  | RF 0x0000 movi  | EX -            | MA -            | RW -            | retired (nothing)
+cyc    3 | IF 0x000c | IBU 0x0008 movi  | RF 0x0004 movi  | EX 0x0000 movi  | MA -            | RW -            | retired (nothing)
+cyc    4 | IF 0x0010 | IBU 0x000c add   | RF 0x0008 movi  | EX 0x0004 movi  | MA 0x0000 movi  | RW -            | retired (nothing)
+cyc    5 | IF 0x0014 | IBU 0x0010 addi  | RF 0x000c add   | EX 0x0008 movi  | MA 0x0004 movi  | RW 0x0000 movi  | retired (nothing)
+cyc    6 | IF 0x0018 | IBU 0x0014 cmp   | RF 0x0010 addi  | EX 0x000c add   | MA 0x0008 movi  | RW 0x0004 movi  | retired 0x0000  movi r1, 1   r1 <- 1
+cyc    7 | IF 0x001c | IBU 0x0018 bgt   | RF 0x0014 cmp   | EX 0x0010 addi  | MA 0x000c add   | RW 0x0008 movi  | retired 0x0004  movi r2, 10   r2 <- 10
+cyc    8 | IF 0x0020 | IBU 0x001c b     | RF 0x0018 bgt   | EX 0x0014 cmp   | MA 0x0010 addi  | RW 0x000c add   | retired 0x0008  movi r3, 0   r3 <- 0
+cyc    9 | IF 0x0024 | IBU 0x0020 st    | RF 0x001c b     | EX 0x0018 bgt   | MA 0x0014 cmp   | RW 0x0010 addi  | retired 0x000c  add r3, r3, r1   r3 <- 1
+cyc   10 | IF 0x0028 | IBU 0x0024 ld    | RF 0x0020 st    | EX 0x001c b     | MA 0x0018 bgt   | RW 0x0014 cmp   | retired 0x0010  addi r1, r1, 1   r1 <- 2
+cyc   11 | IF 0x000c | IBU -            | RF -            | EX -            | MA 0x001c b     | RW 0x0018 bgt   | retired 0x0014  cmp r1, r2
+cyc   12 | IF 0x0010 | IBU 0x000c add   | RF -            | EX -            | MA -            | RW 0x001c b     | retired 0x0018  bgt 0x0020
+cyc   13 | IF 0x0014 | IBU 0x0010 addi  | RF 0x000c add   | EX -            | MA -            | RW -            | retired 0x001c  b 0x000c
+cyc   14 | IF 0x0018 | IBU 0x0014 cmp   | RF 0x0010 addi  | EX 0x000c add   | MA -            | RW -            | retired (nothing)
+cyc   15 | IF 0x001c | IBU 0x0018 bgt   | RF 0x0014 cmp   | EX 0x0010 addi  | MA 0x000c add   | RW -            | retired (nothing)
+cyc   16 | IF 0x000c | IBU 0x001c b     | RF 0x0018 bgt   | EX 0x0014 cmp   | MA 0x0010 addi  | RW 0x000c add   | retired (nothing)
+cyc   17 | IF 0x0010 | IBU 0x000c add   | RF 0x001c b     | EX 0x0018 bgt   | MA 0x0014 cmp   | RW 0x0010 addi  | retired 0x000c  add r3, r3, r1   r3 <- 3
+cyc   18 | IF 0x0014 | IBU 0x0010 addi  | RF 0x000c add   | EX 0x001c b     | MA 0x0018 bgt   | RW 0x0014 cmp   | retired 0x0010  addi r1, r1, 1   r1 <- 3
+cyc   19 | IF 0x0018 | IBU 0x0014 cmp   | RF 0x0010 addi  | EX 0x000c add   | MA 0x001c b     | RW 0x0018 bgt   | retired 0x0014  cmp r1, r2
+cyc   20 | IF 0x001c | IBU 0x0018 bgt   | RF 0x0014 cmp   | EX 0x0010 addi  | MA 0x000c add   | RW 0x001c b     | retired 0x0018  bgt 0x0020
+cyc   21 | IF 0x000c | IBU 0x001c b     | RF 0x0018 bgt   | EX 0x0014 cmp   | MA 0x0010 addi  | RW 0x000c add   | retired 0x001c  b 0x000c  (T)
+cyc   22 | IF 0x0010 | IBU 0x000c add   | RF 0x001c b     | EX 0x0018 bgt   | MA 0x0014 cmp   | RW 0x0010 addi  | retired 0x000c  add r3, r3, r1   r3 <- 6
+cyc   23 | IF 0x0014 | IBU 0x0010 addi  | RF 0x000c add   | EX 0x001c b     | MA 0x0018 bgt   | RW 0x0014 cmp   | retired 0x0010  addi r1, r1, 1   r1 <- 4
+cyc   24 | IF 0x0018 | IBU 0x0014 cmp   | RF 0x0010 addi  | EX 0x000c add   | MA 0x001c b     | RW 0x0018 bgt   | retired 0x0014  cmp r1, r2
+cyc   25 | IF 0x001c | IBU 0x0018 bgt   | RF 0x0014 cmp   | EX 0x0010 addi  | MA 0x000c add   | RW 0x001c b     | retired 0x0018  bgt 0x0020
+cyc   26 | IF 0x000c | IBU 0x001c b     | RF 0x0018 bgt   | EX 0x0014 cmp   | MA 0x0010 addi  | RW 0x000c add   | retired 0x001c  b 0x000c  (T)
+cyc   27 | IF 0x0010 | IBU 0x000c add   | RF 0x001c b     | EX 0x0018 bgt   | MA 0x0014 cmp   | RW 0x0010 addi  | retired 0x000c  add r3, r3, r1   r3 <- 10
+cyc   28 | IF 0x0014 | IBU 0x0010 addi  | RF 0x000c add   | EX 0x001c b     | MA 0x0018 bgt   | RW 0x0014 cmp   | retired 0x0010  addi r1, r1, 1   r1 <- 5
+cyc   29 | IF 0x0018 | IBU 0x0014 cmp   | RF 0x0010 addi  | EX 0x000c add   | MA 0x001c b     | RW 0x0018 bgt   | retired 0x0014  cmp r1, r2
+cyc   30 | IF 0x001c | IBU 0x0018 bgt   | RF 0x0014 cmp   | EX 0x0010 addi  | MA 0x000c add   | RW 0x001c b     | retired 0x0018  bgt 0x0020
+cyc   31 | IF 0x000c | IBU 0x001c b     | RF 0x0018 bgt   | EX 0x0014 cmp   | MA 0x0010 addi  | RW 0x000c add   | retired 0x001c  b 0x000c  (T)
+cyc   32 | IF 0x0010 | IBU 0x000c add   | RF 0x001c b     | EX 0x0018 bgt   | MA 0x0014 cmp   | RW 0x0010 addi  | retired 0x000c  add r3, r3, r1   r3 <- 15
+cyc   33 | IF 0x0014 | IBU 0x0010 addi  | RF 0x000c add   | EX 0x001c b     | MA 0x0018 bgt   | RW 0x0014 cmp   | retired 0x0010  addi r1, r1, 1   r1 <- 6
+cyc   34 | IF 0x0018 | IBU 0x0014 cmp   | RF 0x0010 addi  | EX 0x000c add   | MA 0x001c b     | RW 0x0018 bgt   | retired 0x0014  cmp r1, r2
+cyc   35 | IF 0x001c | IBU 0x0018 bgt   | RF 0x0014 cmp   | EX 0x0010 addi  | MA 0x000c add   | RW 0x001c b     | retired 0x0018  bgt 0x0020
+cyc   36 | IF 0x000c | IBU 0x001c b     | RF 0x0018 bgt   | EX 0x0014 cmp   | MA 0x0010 addi  | RW 0x000c add   | retired 0x001c  b 0x000c  (T)
+cyc   37 | IF 0x0010 | IBU 0x000c add   | RF 0x001c b     | EX 0x0018 bgt   | MA 0x0014 cmp   | RW 0x0010 addi  | retired 0x000c  add r3, r3, r1   r3 <- 21
+cyc   38 | IF 0x0014 | IBU 0x0010 addi  | RF 0x000c add   | EX 0x001c b     | MA 0x0018 bgt   | RW 0x0014 cmp   | retired 0x0010  addi r1, r1, 1   r1 <- 7
+cyc   39 | IF 0x0018 | IBU 0x0014 cmp   | RF 0x0010 addi  | EX 0x000c add   | MA 0x001c b     | RW 0x0018 bgt   | retired 0x0014  cmp r1, r2
+cyc   40 | IF 0x001c | IBU 0x0018 bgt   | RF 0x0014 cmp   | EX 0x0010 addi  | MA 0x000c add   | RW 0x001c b     | retired 0x0018  bgt 0x0020
+cyc   41 | IF 0x000c | IBU 0x001c b     | RF 0x0018 bgt   | EX 0x0014 cmp   | MA 0x0010 addi  | RW 0x000c add   | retired 0x001c  b 0x000c  (T)
+cyc   42 | IF 0x0010 | IBU 0x000c add   | RF 0x001c b     | EX 0x0018 bgt   | MA 0x0014 cmp   | RW 0x0010 addi  | retired 0x000c  add r3, r3, r1   r3 <- 28
+cyc   43 | IF 0x0014 | IBU 0x0010 addi  | RF 0x000c add   | EX 0x001c b     | MA 0x0018 bgt   | RW 0x0014 cmp   | retired 0x0010  addi r1, r1, 1   r1 <- 8
+cyc   44 | IF 0x0018 | IBU 0x0014 cmp   | RF 0x0010 addi  | EX 0x000c add   | MA 0x001c b     | RW 0x0018 bgt   | retired 0x0014  cmp r1, r2
+cyc   45 | IF 0x001c | IBU 0x0018 bgt   | RF 0x0014 cmp   | EX 0x0010 addi  | MA 0x000c add   | RW 0x001c b     | retired 0x0018  bgt 0x0020
+cyc   46 | IF 0x000c | IBU 0x001c b     | RF 0x0018 bgt   | EX 0x0014 cmp   | MA 0x0010 addi  | RW 0x000c add   | retired 0x001c  b 0x000c  (T)
+cyc   47 | IF 0x0010 | IBU 0x000c add   | RF 0x001c b     | EX 0x0018 bgt   | MA 0x0014 cmp   | RW 0x0010 addi  | retired 0x000c  add r3, r3, r1   r3 <- 36
+cyc   48 | IF 0x0014 | IBU 0x0010 addi  | RF 0x000c add   | EX 0x001c b     | MA 0x0018 bgt   | RW 0x0014 cmp   | retired 0x0010  addi r1, r1, 1   r1 <- 9
+cyc   49 | IF 0x0018 | IBU 0x0014 cmp   | RF 0x0010 addi  | EX 0x000c add   | MA 0x001c b     | RW 0x0018 bgt   | retired 0x0014  cmp r1, r2
+cyc   50 | IF 0x001c | IBU 0x0018 bgt   | RF 0x0014 cmp   | EX 0x0010 addi  | MA 0x000c add   | RW 0x001c b     | retired 0x0018  bgt 0x0020
+cyc   51 | IF 0x000c | IBU 0x001c b     | RF 0x0018 bgt   | EX 0x0014 cmp   | MA 0x0010 addi  | RW 0x000c add   | retired 0x001c  b 0x000c  (T)
+cyc   52 | IF 0x0010 | IBU 0x000c add   | RF 0x001c b     | EX 0x0018 bgt   | MA 0x0014 cmp   | RW 0x0010 addi  | retired 0x000c  add r3, r3, r1   r3 <- 45
+cyc   53 | IF 0x0014 | IBU 0x0010 addi  | RF 0x000c add   | EX 0x001c b     | MA 0x0018 bgt   | RW 0x0014 cmp   | retired 0x0010  addi r1, r1, 1   r1 <- 10
+cyc   54 | IF 0x0018 | IBU 0x0014 cmp   | RF 0x0010 addi  | EX 0x000c add   | MA 0x001c b     | RW 0x0018 bgt   | retired 0x0014  cmp r1, r2
+cyc   55 | IF 0x001c | IBU 0x0018 bgt   | RF 0x0014 cmp   | EX 0x0010 addi  | MA 0x000c add   | RW 0x001c b     | retired 0x0018  bgt 0x0020
+cyc   56 | IF 0x000c | IBU 0x001c b     | RF 0x0018 bgt   | EX 0x0014 cmp   | MA 0x0010 addi  | RW 0x000c add   | retired 0x001c  b 0x000c  (T)
+cyc   57 | IF 0x0010 | IBU 0x000c add   | RF 0x001c b     | EX 0x0018 bgt   | MA 0x0014 cmp   | RW 0x0010 addi  | retired 0x000c  add r3, r3, r1   r3 <- 55
+cyc   58 | IF 0x0020 | IBU -            | RF -            | EX -            | MA 0x0018 bgt   | RW 0x0014 cmp   | retired 0x0010  addi r1, r1, 1   r1 <- 11
+cyc   59 | IF 0x0024 | IBU 0x0020 st    | RF -            | EX -            | MA -            | RW 0x0018 bgt   | retired 0x0014  cmp r1, r2
+cyc   60 | IF 0x0028 | IBU 0x0024 ld    | RF 0x0020 st    | EX -            | MA -            | RW -            | retired 0x0018  bgt 0x0020
+cyc   61 | IF 0x002c | IBU 0x0028 addi  | RF 0x0024 ld    | EX 0x0020 st    | MA -            | RW -            | retired (nothing)
+cyc   62 | IF 0x0030 | IBU 0x002c b     | RF 0x0028 addi  | EX 0x0024 ld    | MA 0x0020 st    | RW -            | retired (nothing)
+cyc   63 | IF 0x0030 | IBU 0x002c b     | RF 0x0028 addi  | EX -            | MA 0x0024 ld    | RW 0x0020 st    | retired (nothing)
+cyc   64 | IF 0x0034 | IBU 0x0030 nop   | RF 0x002c b     | EX 0x0028 addi  | MA -            | RW 0x0024 ld    | retired 0x0020  st r3, r0, 256   mem[0x0100] <- 55
+cyc   65 | IF 0x0038 | IBU 0x0034 nop   | RF 0x0030 nop   | EX 0x002c b     | MA 0x0028 addi  | RW -            | retired 0x0024  ld r4, r0, 256   r4 <- 55
+cyc   66 | IF 0x002c | IBU -            | RF -            | EX -            | MA 0x002c b     | RW 0x0028 addi  | retired (nothing)
+cyc   67 | IF 0x002c | IBU 0x002c b     | RF -            | EX -            | MA -            | RW 0x002c b     | retired 0x0028  addi r5, r4, 1   r5 <- 56
+cyc   68 | IF 0x002c | IBU 0x002c b     | RF 0x002c b     | EX -            | MA -            | RW -            | retired 0x002c  b 0x002c
+Program halted (branch to self at 0x002c) after 68 cycles.
+(rdb) quit

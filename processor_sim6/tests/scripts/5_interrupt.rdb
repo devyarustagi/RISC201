@@ -1,0 +1,18 @@
+# program: interrupt
+# Raise an interrupt from the CLI while the user program runs.
+catch interrupt
+break 0x60
+run
+print r1
+delete 1
+interrupt
+special
+continue
+special
+pipe
+print r10
+print r11
+continue
+print r1
+stats
+quit

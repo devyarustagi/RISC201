@@ -1,0 +1,56 @@
+rdb - RISC201 pipeline debugger. Program: build/programs/exceptions.bin (30 instructions). Type 'help'.
+(rdb) # program: exceptions
+(rdb) # Break inside the handler and step through it; retz returns to user mode.
+(rdb) catch div0
+Catching: div0
+(rdb) run
+Caught exception div0 at 0x005c: div r3, r1, r2
+  eCode=3  oldPC=0x005c  oldFlags=E:0 GT:0 LT:0  CPL=0  -> handler at eBase=0x001c
+Next fetch => 0x001c: movz oldSP, sp
+(rdb) break 0x4c
+Breakpoint 1 at 0x004c: retz
+(rdb) continue
+Breakpoint 1 at 0x004c: retz   (cycle 48)
+Next fetch => 0x004c: retz
+(rdb) special
+CPL      = 0 (OS mode)
+eBase    = 0x001c
+eCode    = 3 (div0)
+oldPC    = 0x0060
+oldSP    = 0x00001000
+oldFlags = E:0 GT:0 LT:0
+interrupt pending = no
+(rdb) print sp
+sp = 0x00001000 (4096)
+(rdb) step 3
+cyc   49 | IF 0x0050 | IBU 0x004c retz  | RF -            | EX -            | MA -            | RW -            | retired (nothing)
+cyc   50 | IF 0x0060 | IBU -            | RF 0x004c retz  | EX -            | MA -            | RW -            | retired (nothing)
+cyc   51 | IF 0x0064 | IBU 0x0060 ecall | RF -            | EX 0x004c retz  | MA -            | RW -            | retired (nothing)
+cycle 51   next fetch 0x0064   CPL 1   flags E:0 GT:0 LT:1   RAS depth 0
+  IF/IBU  0x0060  ecall                     (fetched, decoded next)
+  IBU/RF  (bubble)
+  RF/EX   0x004c  retz                      retz  read op1=0 op2=0
+  EX/MA   (bubble)
+  MA/RW   (bubble)
+  retired   (nothing)
+(rdb) pipe
+cycle 51   next fetch 0x0064   CPL 1   flags E:0 GT:0 LT:1   RAS depth 0
+  IF/IBU  0x0060  ecall                     (fetched, decoded next)
+  IBU/RF  (bubble)
+  RF/EX   0x004c  retz                      retz  read op1=0 op2=0
+  EX/MA   (bubble)
+  MA/RW   (bubble)
+  retired   (nothing)
+(rdb) special
+CPL      = 1 (user mode)
+eBase    = 0x001c
+eCode    = 3 (div0)
+oldPC    = 0x0060
+oldSP    = 0x00001000
+oldFlags = E:0 GT:0 LT:0
+interrupt pending = no
+(rdb) delete
+Deleted all breakpoints and watchpoints.
+(rdb) continue
+Program halted (branch to self at 0x0074) after 151 cycles.
+(rdb) quit

@@ -1,0 +1,14 @@
+# program: breakpoints
+# Cycle-by-cycle stepping through the pipeline, the load-use stall, hbreak, next.
+step
+step
+step 3
+hbreak 0x24
+continue
+step 4
+next 2
+stats
+delete
+trace on
+run
+quit

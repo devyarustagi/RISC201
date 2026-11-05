@@ -1,0 +1,16 @@
+# program: hazards
+# 6-stage hazards: a mispredicted beq flushes three wrong-path instructions
+# (including a ret that already popped the RAS in IBU), then the load-use stall.
+break 0x3c
+run
+step 4
+print pc
+delete
+break 0x14
+continue
+step 6
+stats
+continue
+print r1
+print mem 260
+quit
