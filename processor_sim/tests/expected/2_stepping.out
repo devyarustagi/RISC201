@@ -1,0 +1,119 @@
+rdb - RISC201 pipeline debugger. Program: build/programs/breakpoints.bin (12 instructions). Type 'help'.
+(rdb) # program: breakpoints
+(rdb) # Cycle-by-cycle stepping through the pipeline, the load-use stall, hbreak, next.
+(rdb) step
+cycle 1   next fetch 0x0004   CPL 0   flags E:0 GT:0 LT:0   RAS depth 0
+  IF/OF  0x0000  movi r1, 1                (waiting for OF)
+  OF/EX  (bubble)
+  EX/MA  (bubble)
+  retired  (nothing)
+(rdb) step
+cycle 2   next fetch 0x0008   CPL 0   flags E:0 GT:0 LT:0   RAS depth 0
+  IF/OF  0x0004  movi r2, 10               (waiting for OF)
+  OF/EX  0x0000  movi r1, 1                ALU PASS -> r1  read op1=0 op2=0
+  EX/MA  (bubble)
+  retired  (nothing)
+(rdb) step 3
+cyc    3 | fetch 0x000c | OF 0x0008 movi  | EX 0x0004 movi  | MA 0x0000 movi  | retired (nothing)
+cyc    4 | fetch 0x0010 | OF 0x000c add   | EX 0x0008 movi  | MA 0x0004 movi  | retired 0x0000  movi r1, 1   r1 <- 1
+cyc    5 | fetch 0x0014 | OF 0x0010 addi  | EX 0x000c add   | MA 0x0008 movi  | retired 0x0004  movi r2, 10   r2 <- 10
+cycle 5   next fetch 0x0014   CPL 0   flags E:0 GT:0 LT:0   RAS depth 0
+  IF/OF  0x0010  addi r1, r1, 1            (waiting for OF)
+  OF/EX  0x000c  add r3, r3, r1            ALU ADD -> r3  read op1=0 op2=1
+  EX/MA  0x0008  movi r3, 0                ALU PASS -> r3  result=0
+  retired  0x0004  movi r2, 10   r2 <- 10
+(rdb) hbreak 0x24
+Hardware breakpoint 1 at 0x0024: ld r4, r0, 256
+(rdb) continue
+Hardware breakpoint 1 at 0x0024 fetched: ld r4, r0, 256   (cycle 58)
+Next fetch => 0x0028: addi r5, r4, 1
+(rdb) step 4
+cyc   59 | fetch 0x002c | OF 0x0028 addi  | EX 0x0024 ld    | MA 0x0020 st    | retired (nothing)
+cyc   60 | fetch 0x002c | OF 0x0028 addi  | EX -            | MA 0x0024 ld    | retired 0x0020  st r3, r0, 256   mem[0x0100] <- 55
+cyc   61 | fetch 0x0030 | OF 0x002c b     | EX 0x0028 addi  | MA -            | retired 0x0024  ld r4, r0, 256   r4 <- 55
+cyc   62 | fetch 0x0034 | OF 0x0030 nop   | EX 0x002c b     | MA 0x0028 addi  | retired (nothing)
+cycle 62   next fetch 0x0034   CPL 0   flags E:0 GT:1 LT:0   RAS depth 0
+  IF/OF  0x0030  nop                       (waiting for OF)
+  OF/EX  0x002c  b 0x002c                  branch  read op1=0 op2=0
+  EX/MA  0x0028  addi r5, r4, 1            ALU ADD -> r5  result=56
+  retired  (nothing)
+(rdb) next 2
+Program halted (branch to self at 0x002c) after 63 cycles.
+(rdb) stats
+cycles           63
+instructions     55
+CPI              1.15
+mispredictions   3
+stall cycles     1
+exceptions taken 0
+halted           yes
+(rdb) delete
+Deleted all breakpoints and watchpoints.
+(rdb) trace on
+trace on
+(rdb) run
+cyc    1 | fetch 0x0004 | OF 0x0000 movi  | EX -            | MA -            | retired (nothing)
+cyc    2 | fetch 0x0008 | OF 0x0004 movi  | EX 0x0000 movi  | MA -            | retired (nothing)
+cyc    3 | fetch 0x000c | OF 0x0008 movi  | EX 0x0004 movi  | MA 0x0000 movi  | retired (nothing)
+cyc    4 | fetch 0x0010 | OF 0x000c add   | EX 0x0008 movi  | MA 0x0004 movi  | retired 0x0000  movi r1, 1   r1 <- 1
+cyc    5 | fetch 0x0014 | OF 0x0010 addi  | EX 0x000c add   | MA 0x0008 movi  | retired 0x0004  movi r2, 10   r2 <- 10
+cyc    6 | fetch 0x0018 | OF 0x0014 cmp   | EX 0x0010 addi  | MA 0x000c add   | retired 0x0008  movi r3, 0   r3 <- 0
+cyc    7 | fetch 0x001c | OF 0x0018 bgt   | EX 0x0014 cmp   | MA 0x0010 addi  | retired 0x000c  add r3, r3, r1   r3 <- 1
+cyc    8 | fetch 0x0020 | OF 0x001c b     | EX 0x0018 bgt   | MA 0x0014 cmp   | retired 0x0010  addi r1, r1, 1   r1 <- 2
+cyc    9 | fetch 0x0024 | OF 0x0020 st    | EX 0x001c b     | MA 0x0018 bgt   | retired 0x0014  cmp r1, r2
+cyc   10 | fetch 0x000c | OF -            | EX -            | MA 0x001c b     | retired 0x0018  bgt 0x0020
+cyc   11 | fetch 0x0010 | OF 0x000c add   | EX -            | MA -            | retired 0x001c  b 0x000c
+cyc   12 | fetch 0x0014 | OF 0x0010 addi  | EX 0x000c add   | MA -            | retired (nothing)
+cyc   13 | fetch 0x0018 | OF 0x0014 cmp   | EX 0x0010 addi  | MA 0x000c add   | retired (nothing)
+cyc   14 | fetch 0x001c | OF 0x0018 bgt   | EX 0x0014 cmp   | MA 0x0010 addi  | retired 0x000c  add r3, r3, r1   r3 <- 3
+cyc   15 | fetch 0x000c | OF 0x001c b     | EX 0x0018 bgt   | MA 0x0014 cmp   | retired 0x0010  addi r1, r1, 1   r1 <- 3
+cyc   16 | fetch 0x0010 | OF 0x000c add   | EX 0x001c b     | MA 0x0018 bgt   | retired 0x0014  cmp r1, r2
+cyc   17 | fetch 0x0014 | OF 0x0010 addi  | EX 0x000c add   | MA 0x001c b     | retired 0x0018  bgt 0x0020
+cyc   18 | fetch 0x0018 | OF 0x0014 cmp   | EX 0x0010 addi  | MA 0x000c add   | retired 0x001c  b 0x000c  (T)
+cyc   19 | fetch 0x001c | OF 0x0018 bgt   | EX 0x0014 cmp   | MA 0x0010 addi  | retired 0x000c  add r3, r3, r1   r3 <- 6
+cyc   20 | fetch 0x000c | OF 0x001c b     | EX 0x0018 bgt   | MA 0x0014 cmp   | retired 0x0010  addi r1, r1, 1   r1 <- 4
+cyc   21 | fetch 0x0010 | OF 0x000c add   | EX 0x001c b     | MA 0x0018 bgt   | retired 0x0014  cmp r1, r2
+cyc   22 | fetch 0x0014 | OF 0x0010 addi  | EX 0x000c add   | MA 0x001c b     | retired 0x0018  bgt 0x0020
+cyc   23 | fetch 0x0018 | OF 0x0014 cmp   | EX 0x0010 addi  | MA 0x000c add   | retired 0x001c  b 0x000c  (T)
+cyc   24 | fetch 0x001c | OF 0x0018 bgt   | EX 0x0014 cmp   | MA 0x0010 addi  | retired 0x000c  add r3, r3, r1   r3 <- 10
+cyc   25 | fetch 0x000c | OF 0x001c b     | EX 0x0018 bgt   | MA 0x0014 cmp   | retired 0x0010  addi r1, r1, 1   r1 <- 5
+cyc   26 | fetch 0x0010 | OF 0x000c add   | EX 0x001c b     | MA 0x0018 bgt   | retired 0x0014  cmp r1, r2
+cyc   27 | fetch 0x0014 | OF 0x0010 addi  | EX 0x000c add   | MA 0x001c b     | retired 0x0018  bgt 0x0020
+cyc   28 | fetch 0x0018 | OF 0x0014 cmp   | EX 0x0010 addi  | MA 0x000c add   | retired 0x001c  b 0x000c  (T)
+cyc   29 | fetch 0x001c | OF 0x0018 bgt   | EX 0x0014 cmp   | MA 0x0010 addi  | retired 0x000c  add r3, r3, r1   r3 <- 15
+cyc   30 | fetch 0x000c | OF 0x001c b     | EX 0x0018 bgt   | MA 0x0014 cmp   | retired 0x0010  addi r1, r1, 1   r1 <- 6
+cyc   31 | fetch 0x0010 | OF 0x000c add   | EX 0x001c b     | MA 0x0018 bgt   | retired 0x0014  cmp r1, r2
+cyc   32 | fetch 0x0014 | OF 0x0010 addi  | EX 0x000c add   | MA 0x001c b     | retired 0x0018  bgt 0x0020
+cyc   33 | fetch 0x0018 | OF 0x0014 cmp   | EX 0x0010 addi  | MA 0x000c add   | retired 0x001c  b 0x000c  (T)
+cyc   34 | fetch 0x001c | OF 0x0018 bgt   | EX 0x0014 cmp   | MA 0x0010 addi  | retired 0x000c  add r3, r3, r1   r3 <- 21
+cyc   35 | fetch 0x000c | OF 0x001c b     | EX 0x0018 bgt   | MA 0x0014 cmp   | retired 0x0010  addi r1, r1, 1   r1 <- 7
+cyc   36 | fetch 0x0010 | OF 0x000c add   | EX 0x001c b     | MA 0x0018 bgt   | retired 0x0014  cmp r1, r2
+cyc   37 | fetch 0x0014 | OF 0x0010 addi  | EX 0x000c add   | MA 0x001c b     | retired 0x0018  bgt 0x0020
+cyc   38 | fetch 0x0018 | OF 0x0014 cmp   | EX 0x0010 addi  | MA 0x000c add   | retired 0x001c  b 0x000c  (T)
+cyc   39 | fetch 0x001c | OF 0x0018 bgt   | EX 0x0014 cmp   | MA 0x0010 addi  | retired 0x000c  add r3, r3, r1   r3 <- 28
+cyc   40 | fetch 0x000c | OF 0x001c b     | EX 0x0018 bgt   | MA 0x0014 cmp   | retired 0x0010  addi r1, r1, 1   r1 <- 8
+cyc   41 | fetch 0x0010 | OF 0x000c add   | EX 0x001c b     | MA 0x0018 bgt   | retired 0x0014  cmp r1, r2
+cyc   42 | fetch 0x0014 | OF 0x0010 addi  | EX 0x000c add   | MA 0x001c b     | retired 0x0018  bgt 0x0020
+cyc   43 | fetch 0x0018 | OF 0x0014 cmp   | EX 0x0010 addi  | MA 0x000c add   | retired 0x001c  b 0x000c  (T)
+cyc   44 | fetch 0x001c | OF 0x0018 bgt   | EX 0x0014 cmp   | MA 0x0010 addi  | retired 0x000c  add r3, r3, r1   r3 <- 36
+cyc   45 | fetch 0x000c | OF 0x001c b     | EX 0x0018 bgt   | MA 0x0014 cmp   | retired 0x0010  addi r1, r1, 1   r1 <- 9
+cyc   46 | fetch 0x0010 | OF 0x000c add   | EX 0x001c b     | MA 0x0018 bgt   | retired 0x0014  cmp r1, r2
+cyc   47 | fetch 0x0014 | OF 0x0010 addi  | EX 0x000c add   | MA 0x001c b     | retired 0x0018  bgt 0x0020
+cyc   48 | fetch 0x0018 | OF 0x0014 cmp   | EX 0x0010 addi  | MA 0x000c add   | retired 0x001c  b 0x000c  (T)
+cyc   49 | fetch 0x001c | OF 0x0018 bgt   | EX 0x0014 cmp   | MA 0x0010 addi  | retired 0x000c  add r3, r3, r1   r3 <- 45
+cyc   50 | fetch 0x000c | OF 0x001c b     | EX 0x0018 bgt   | MA 0x0014 cmp   | retired 0x0010  addi r1, r1, 1   r1 <- 10
+cyc   51 | fetch 0x0010 | OF 0x000c add   | EX 0x001c b     | MA 0x0018 bgt   | retired 0x0014  cmp r1, r2
+cyc   52 | fetch 0x0014 | OF 0x0010 addi  | EX 0x000c add   | MA 0x001c b     | retired 0x0018  bgt 0x0020
+cyc   53 | fetch 0x0018 | OF 0x0014 cmp   | EX 0x0010 addi  | MA 0x000c add   | retired 0x001c  b 0x000c  (T)
+cyc   54 | fetch 0x001c | OF 0x0018 bgt   | EX 0x0014 cmp   | MA 0x0010 addi  | retired 0x000c  add r3, r3, r1   r3 <- 55
+cyc   55 | fetch 0x000c | OF 0x001c b     | EX 0x0018 bgt   | MA 0x0014 cmp   | retired 0x0010  addi r1, r1, 1   r1 <- 11
+cyc   56 | fetch 0x0020 | OF -            | EX -            | MA 0x0018 bgt   | retired 0x0014  cmp r1, r2
+cyc   57 | fetch 0x0024 | OF 0x0020 st    | EX -            | MA -            | retired 0x0018  bgt 0x0020
+cyc   58 | fetch 0x0028 | OF 0x0024 ld    | EX 0x0020 st    | MA -            | retired (nothing)
+cyc   59 | fetch 0x002c | OF 0x0028 addi  | EX 0x0024 ld    | MA 0x0020 st    | retired (nothing)
+cyc   60 | fetch 0x002c | OF 0x0028 addi  | EX -            | MA 0x0024 ld    | retired 0x0020  st r3, r0, 256   mem[0x0100] <- 55
+cyc   61 | fetch 0x0030 | OF 0x002c b     | EX 0x0028 addi  | MA -            | retired 0x0024  ld r4, r0, 256   r4 <- 55
+cyc   62 | fetch 0x0034 | OF 0x0030 nop   | EX 0x002c b     | MA 0x0028 addi  | retired (nothing)
+cyc   63 | fetch 0x002c | OF -            | EX -            | MA 0x002c b     | retired 0x0028  addi r5, r4, 1   r5 <- 56
+Program halted (branch to self at 0x002c) after 63 cycles.
+(rdb) quit

@@ -1,0 +1,54 @@
+rdb - RISC201 pipeline debugger. Program: build/programs/rasovf.bin (25 instructions). Type 'help'.
+(rdb) # program: rasovf
+(rdb) # RAS overflow on the 17th nested call, then an invalid opcode planted with 'set inst'.
+(rdb) catch rasovf wronginst
+Catching: rasovf wronginst
+(rdb) run
+Caught exception rasovf at 0x005c: call 0x0058  (T)
+  eCode=4  oldPC=0x005c  oldFlags=E:0 GT:0 LT:0  CPL=0  -> handler at eBase=0x001c
+Next fetch => 0x001c: movz oldSP, sp
+(rdb) print r1
+r1 = 0x00000011 (17)
+(rdb) pipe
+cycle 49   next fetch 0x001c   CPL 0   flags E:0 GT:0 LT:0   RAS depth 16
+  IF/OF  (bubble)
+  OF/EX  (bubble)
+  EX/MA  (bubble)
+  retired  0x005c  call 0x0058  (T)   [EXCEPTION rasovf -> eBase]
+(rdb) special
+CPL      = 0 (OS mode)
+eBase    = 0x001c
+eCode    = 4 (rasovf)
+oldPC    = 0x005c
+oldSP    = 0x00000000
+oldFlags = E:0 GT:0 LT:0
+interrupt pending = no
+(rdb) reset
+Program reloaded; CPU reset (cycle 0, CPL 0).
+(rdb) set inst 0x58 0xfc000000
+inst[0x0058] = 0xfc000000  .word 0xfc000000   (invalid opcode 63)
+(rdb) disasm 0x50 5
+     0x0050:  0x6b801000  movi sp, 4096
+     0x0054:  0x68400000  movi r1, 0
+     0x0058:  0xfc000000  .word 0xfc000000   (invalid opcode 63)
+     0x005c:  0x99ffffff  call 0x0058
+     0x0060:  0x8c000000  b 0x0060
+(rdb) continue
+Caught exception wronginst at 0x0058: .word 0xfc000000   (invalid opcode 63)
+  eCode=5  oldPC=0x0058  oldFlags=E:0 GT:0 LT:0  CPL=0  -> handler at eBase=0x001c
+Next fetch => 0x001c: movz oldSP, sp
+(rdb) special
+CPL      = 0 (OS mode)
+eBase    = 0x001c
+eCode    = 5 (wronginst)
+oldPC    = 0x0058
+oldSP    = 0x00000000
+oldFlags = E:0 GT:0 LT:0
+interrupt pending = no
+(rdb) pipe
+cycle 14   next fetch 0x001c   CPL 0   flags E:0 GT:0 LT:0   RAS depth 0
+  IF/OF  (bubble)
+  OF/EX  (bubble)
+  EX/MA  (bubble)
+  retired  0x0058  .word 0xfc000000   (invalid opcode 63)   [EXCEPTION wronginst -> eBase]
+(rdb) quit

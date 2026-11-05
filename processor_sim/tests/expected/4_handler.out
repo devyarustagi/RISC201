@@ -1,0 +1,52 @@
+rdb - RISC201 pipeline debugger. Program: build/programs/exceptions.bin (30 instructions). Type 'help'.
+(rdb) # program: exceptions
+(rdb) # Break inside the handler and step through it; retz returns to user mode.
+(rdb) catch div0
+Catching: div0
+(rdb) run
+Caught exception div0 at 0x005c: div r3, r1, r2
+  eCode=3  oldPC=0x005c  oldFlags=E:0 GT:0 LT:0  CPL=0  -> handler at eBase=0x001c
+Next fetch => 0x001c: movz oldSP, sp
+(rdb) break 0x4c
+Breakpoint 1 at 0x004c: retz
+(rdb) continue
+Breakpoint 1 at 0x004c: retz   (cycle 31)
+Next fetch => 0x004c: retz
+(rdb) special
+CPL      = 0 (OS mode)
+eBase    = 0x001c
+eCode    = 3 (div0)
+oldPC    = 0x0060
+oldSP    = 0x00001000
+oldFlags = E:0 GT:0 LT:0
+interrupt pending = no
+(rdb) print sp
+sp = 0x00001000 (4096)
+(rdb) step 3
+cyc   32 | fetch 0x0050 | OF 0x004c retz  | EX -            | MA -            | retired (nothing)
+cyc   33 | fetch 0x0060 | OF -            | EX 0x004c retz  | MA -            | retired (nothing)
+cyc   34 | fetch 0x0064 | OF 0x0060 ecall | EX -            | MA 0x004c retz  | retired (nothing)
+cycle 34   next fetch 0x0064   CPL 1   flags E:0 GT:0 LT:1   RAS depth 0
+  IF/OF  0x0060  ecall                     (waiting for OF)
+  OF/EX  (bubble)
+  EX/MA  0x004c  retz                      retz  result=0
+  retired  (nothing)
+(rdb) pipe
+cycle 34   next fetch 0x0064   CPL 1   flags E:0 GT:0 LT:1   RAS depth 0
+  IF/OF  0x0060  ecall                     (waiting for OF)
+  OF/EX  (bubble)
+  EX/MA  0x004c  retz                      retz  result=0
+  retired  (nothing)
+(rdb) special
+CPL      = 1 (user mode)
+eBase    = 0x001c
+eCode    = 3 (div0)
+oldPC    = 0x0060
+oldSP    = 0x00001000
+oldFlags = E:0 GT:0 LT:0
+interrupt pending = no
+(rdb) delete
+Deleted all breakpoints and watchpoints.
+(rdb) continue
+Program halted (branch to self at 0x0074) after 92 cycles.
+(rdb) quit
