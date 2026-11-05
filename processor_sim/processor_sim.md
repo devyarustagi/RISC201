@@ -103,8 +103,9 @@ single bit test — `bool immediateForm = (opcode & 1) == 1;`:
 | `madd` `msub` `mmul` `mdiv` `mmod` `mand` `mor` `mxor` `mlsl` `mlsr` `masr` | `maddi` `msubi` `mmuli` `mdivi` `mmodi` `mandi` `mori` `mxori` `mlsli` `mlsri` `masri` |
 | `mcmp` `mnot` `mmov` `mfadd` `mfsub` `mfmul` `mfdiv` `mfcmp` `mret` | `mcmpi` `mmovi` `mld` `mst` `mb` `mbeq` `mbgt` `mcall` |
 
-The privileged / exception micro-ops (`mmovz`=0x28, `mretz`=0x29, `mebreak`=0x2A,
-`mecall`=0x2B) are decoded explicitly rather than by the parity rule.
+The privileged / exception micro-ops (`mmovz`=0x27, `mretz`=0x28, `mebreak`=0x29,
+`mecall`=0x2A) form one contiguous block that is decoded explicitly rather than
+by the parity rule.
 
 The complete table lives in `microassembler/microassembler.cpp`; the simulator
 mirrors it in `include/common/micro_types.hpp` (`namespace MicroOp`).

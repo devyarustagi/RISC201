@@ -30,10 +30,14 @@ const std::unordered_map<std::string, microinstructionDetails> Microassembler::m
     {"mfcmp", {0x22, "12"}},    // fcmp
     {"mret",  {0x24, ""}},      // ret
     {"mmov",  {0x26, "d2"}},    // mov rd, rs2  (register move)
-    {"mmovz", {0x28, "d2"}},    // movz (privileged, register window)
-    {"mretz", {0x29, ""}},      // retz (privileged)
-    {"mebreak", {0x2A, ""}},    // ebreak
-    {"mecall",  {0x2B, ""}},    // ecall
+    // Special group (privileged / exception). These are decoded explicitly by
+    // the control unit, so they are exempt from the even = register / odd =
+    // immediate parity rule and form one contiguous block after the normal
+    // micro-opcodes (0x00 - 0x26), with no parity-based meaning.
+    {"mmovz", {0x27, "d2"}},    // movz (privileged, register window)
+    {"mretz", {0x28, ""}},      // retz (privileged)
+    {"mebreak", {0x29, ""}},    // ebreak
+    {"mecall",  {0x2A, ""}},    // ecall
 
     // Immediate form (odd).
     {"maddi", {0x01, "d1i"}},   // nop / addi

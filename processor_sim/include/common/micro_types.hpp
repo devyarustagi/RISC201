@@ -114,10 +114,13 @@ constexpr uint8_t MB    = 0x1F;
 constexpr uint8_t MBEQ  = 0x21;
 constexpr uint8_t MBGT  = 0x23;
 constexpr uint8_t MCALL = 0x25;
-constexpr uint8_t MMOVZ = 0x28;   // movz rd, rs2 (windowed, register form)
-constexpr uint8_t MRETZ = 0x29;   // retz
-constexpr uint8_t MEBREAK = 0x2A; // ebreak
-constexpr uint8_t MECALL  = 0x2B; // ecall
+// Special group (privileged / exception). Decoded explicitly, so it is exempt
+// from the even/odd parity rule and occupies one contiguous block after the
+// normal micro-opcodes (0x00 - 0x26).
+constexpr uint8_t MMOVZ = 0x27;   // movz rd, rs2 (windowed)
+constexpr uint8_t MRETZ = 0x28;   // retz
+constexpr uint8_t MEBREAK = 0x29; // ebreak
+constexpr uint8_t MECALL  = 0x2A; // ecall
 }  // namespace MicroOp
 
 // A decoded microinstruction, read out of the microprogram ROM.

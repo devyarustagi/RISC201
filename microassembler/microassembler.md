@@ -67,7 +67,7 @@ A ready-to-assemble copy of the spec's mapping table is provided in
 - The label marks the address of the **next** microinstruction. A label with no
   instructions before the next label simply shares that address.
 
-**Every active macro opcode (0x00–0x27, i.e. `nop` through `ret`) must have a
+**Every active macro opcode (0x00–0x2B, i.e. `nop` through `ecall`) must have a
 label**, because `rom_address_table.rom` contains one entry per opcode. The full
 required set is:
 
@@ -123,8 +123,8 @@ Paired mnemonics therefore sit next to each other.
 | `0x22` | `mfcmp` | `rs1, rs2`      | `0x23` | `mbgt`  | *(none)* |
 | `0x24` | `mret`  | *(none)*        | `0x25` | `mcall` | *(none)* |
 | `0x26` | `mmov`  | `rd, rs2`       |        |         |         |
-| `0x28` | `mmovz` | `rd, rs2`       | `0x29` | `mretz` | *(none)* |
-| `0x2A` | `mebreak` | *(none)*      | `0x2B` | `mecall`| *(none)* |
+| `0x27` | `mmovz` | `rd, rs2`       | `0x28` | `mretz` | *(none)* |
+| `0x29` | `mebreak` | *(none)*      | `0x2A` | `mecall`| *(none)* |
 
 `mmov` is the register move (`rd = rs2`) and `mmovi` the immediate move
 (`rd = imm`); they are distinct microinstructions.
