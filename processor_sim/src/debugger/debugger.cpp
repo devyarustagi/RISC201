@@ -152,6 +152,7 @@ void Debugger::resetMachine() {
     cpu_.LoadProgram(programPath_);   // fresh copy: drops predictor flips and patches
     cpu_.Reset();
     stepOverPending_ = false;
+    frames_.clear();
     for (Breakpoint& bp : breakpoints_) {
         bp.inserted = false;
         if (bp.enabled && !bp.hardware) {
@@ -222,6 +223,20 @@ uint32_t Debugger::originalInstruction(uint32_t address) const {
     return cpu_.Mem().FetchInstruction(address);
 }
 
+// A committed call opens a frame (sp at that moment); a committed ret closes it.
+void Debugger::trackFrames() {
+    const RetireInfo& r = cpu_.LastRetired();
+    if (!r.valid || r.exception) {
+        return;
+    }
+    const uint8_t opcode = static_cast<uint8_t>(r.instruction >> 26);
+    if (opcode == static_cast<uint8_t>(MacroOp::CALL)) {
+        frames_.push_back(Frame{r.pc, r.pc + 4, cpu_.Gpr().Read(GPR_SP)});
+    } else if (opcode == static_cast<uint8_t>(MacroOp::RET) && !frames_.empty()) {
+        frames_.pop_back();
+    }
+}
+
 uint32_t Debugger::watchValue(const Watchpoint& wp) const {
     return wp.memory ? cpu_.Mem().ReadData(wp.target)
                      : cpu_.Gpr().Read(static_cast<uint8_t>(wp.target));
@@ -260,6 +275,7 @@ Debugger::StopReason Debugger::advance(uint64_t cycleLimit, uint64_t retireLimit
         if (r.valid) {
             ++retired;
         }
+        trackFrames();
 
         // The breakpoint we resumed from has left the pipeline: put it back.
         if (stepOverPending_ && ((r.valid && r.pc == stepOverAddress_) || cpu_.Halted())) {

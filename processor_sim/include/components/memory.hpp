@@ -37,6 +37,9 @@ public:
     void WriteData(uint32_t address, uint32_t value);
     const std::vector<uint32_t> &InstructionRam() const { return instructionRam_; }
     void DumpData(std::ostream &out) const;
+
+    /** @brief Every data word written so far (address -> value), for viewers. */
+    const std::map<uint32_t, uint32_t>& DataWords() const { return dataRam_; }
     void Reset();     // clears both memories
     void ResetData(); // clears data memory only
 };

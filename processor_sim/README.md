@@ -35,6 +35,35 @@ Options: `--rom <file>`, `--table <file>` (microcode images), `--max-cycles <n>`
 
 A program halts on a branch to itself (`HALT: b HALT`).
 
+## Full-screen debugger (`--tui`)
+
+```sh
+make tui PROG=stack          # or: ./build/processor_sim build/programs/stack.bin --tui
+```
+
+A btop-style view built on ncurses (`-lncurses`, preinstalled on macOS and most Linux;
+on Debian/Ubuntu `sudo apt install libncurses-dev` if the link fails). Terminal must be at least 80x20.
+
+| Panel | Shows |
+|---|---|
+| Program (top) | every instruction: `*` breakpoint, `h` hbreak, `=>` next fetch, `[IF]/[OF]/[EX]/[MA]` stage, pipeline strip |
+| Registers (bottom left) | r0-r15 (changed values in yellow), flags, RAS depth, CPL/eBase/eCode, oldPC/oldSP/oldFlags, counters |
+| Stack (bottom right) | words around `sp` (high addresses on top), call frames from `call`/`ret`; `m` switches to every data word written |
+
+| Key | Action |
+|---|---|
+| click / `b` / Enter / F9 | toggle breakpoint on the instruction |
+| `s` / F10, `S` | step 1 cycle, 10 cycles |
+| `n` / F11 | next instruction (retire) |
+| `c` / F5 | continue to the next stop |
+| `r`, `R` | restart and run, reset |
+| space / `p`, `+` / `-` | play (auto-step), faster / slower |
+| `i` | raise an external interrupt |
+| Tab, arrows, `j`/`k`, PgUp/PgDn, wheel | focus a panel and scroll |
+| `f`, `m` | follow PC on/off, stack / memory view |
+| `:` | type any debugger command below (e.g. `:watch 256`, `:catch all`) |
+| `h` / `?`, `q` | help, quit |
+
 ## Debugger commands
 
 | Command | What it does |

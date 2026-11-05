@@ -3,6 +3,7 @@
 #   make                      build the simulator, the microcode ROMs and the test programs
 #   make test                 run every test program in batch and debugger mode
 #   make debug PROG=<name>    open the debugger on tests/programs/<name>.asm
+#   make tui PROG=<name>      the same, full screen (btop-style)
 #   make clean
 #
 # Tools built from the sibling folders: ../microassembler (microcode -> ROM)
@@ -11,6 +12,7 @@
 CXX      ?= g++
 CXXFLAGS ?= -std=c++17 -Wall -Wextra -O2
 INCLUDES := -Iinclude
+LDLIBS   ?= -lncurses   # full-screen debugger (--tui); ships with macOS and Linux
 BUILD    := build
 
 SIM_SRCS := main.cpp $(wildcard src/components/*.cpp src/stages/*.cpp src/core/*.cpp src/debugger/*.cpp)
@@ -28,7 +30,7 @@ PROGRAMS := $(patsubst tests/programs/%.asm,$(BUILD)/programs/%.bin,$(wildcard t
 
 PROG     ?= breakpoints
 
-.PHONY: all test debug clean
+.PHONY: all test debug tui clean
 
 all: $(SIM) $(ROM) $(PROGRAMS)
 
@@ -37,7 +39,7 @@ $(BUILD)/obj/%.o: %.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
 $(SIM): $(SIM_OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDLIBS)
 
 $(MASM): ../microassembler/microassembler.cpp
 	@mkdir -p $(BUILD)
@@ -59,6 +61,9 @@ test: all
 
 debug: all
 	$(SIM) $(BUILD)/programs/$(PROG).bin --debug
+
+tui: all
+	$(SIM) $(BUILD)/programs/$(PROG).bin --tui
 
 clean:
 	rm -rf $(BUILD)

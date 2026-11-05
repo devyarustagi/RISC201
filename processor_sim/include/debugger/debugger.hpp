@@ -27,6 +27,16 @@ class Cpu;
  */
 class Debugger {
 public:
+    /** @brief One call frame, recorded when a `call` commits and dropped on `ret`. */
+    struct Frame {
+        uint32_t callPc = 0;         // address of the call instruction
+        uint32_t returnAddress = 0;  // callPc + 4
+        uint32_t sp = 0;             // sp when the call committed
+    };
+
+    /** @brief Call frames seen since the last reset (innermost last). */
+    const std::vector<Frame>& Frames() const { return frames_; }
+
     Debugger(Cpu& cpu, std::string programPath, uint64_t maxCycles);
 
     /** @brief Reads and runs commands until `quit` or end of input. */
@@ -36,6 +46,8 @@ public:
     bool Execute(const std::string& line, std::ostream& out);
 
 private:
+    friend class Tui;   // the full-screen view drives the same engine
+
     struct Breakpoint {
         int id = 0;
         uint32_t address = 0;
@@ -67,6 +79,7 @@ private:
     bool stepOverPending_ = false; // a breakpoint's original instruction is in flight
     uint32_t stepOverAddress_ = 0;
     std::string stopMessage_;
+    std::vector<Frame> frames_;
 
     // Execution.
     StopReason advance(uint64_t cycleLimit, uint64_t retireLimit, std::ostream& out);
@@ -77,6 +90,7 @@ private:
     Breakpoint* softBreakpointAt(uint32_t address);
     uint32_t originalInstruction(uint32_t address) const;
     uint32_t watchValue(const Watchpoint& wp) const;
+    void trackFrames();
 
     // Output.
     void printStop(StopReason reason, std::ostream& out) const;

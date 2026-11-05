@@ -8,6 +8,7 @@
 //   --trace               batch mode: print the pipeline every cycle
 //   --debug               start the interactive debugger (rdb)
 //   --script <file>       run debugger commands from a file (implies --debug)
+//   --tui                 full-screen debugger (btop-style panels, mouse breakpoints)
 //
 // Batch mode runs the program to halt (branch to self) or the cycle limit and
 // prints the final state; debugger mode reads commands from stdin or a script.
@@ -21,12 +22,13 @@
 
 #include "core/cpu.hpp"
 #include "debugger/debugger.hpp"
+#include "debugger/tui.hpp"
 
 namespace {
 
 void usage() {
     std::cerr << "usage: processor_sim <program.bin> [--rom <file>] [--table <file>]\n"
-                 "                     [--max-cycles <n>] [--trace] [--debug] [--script <file>]\n";
+                 "                     [--max-cycles <n>] [--trace] [--debug] [--script <file>] [--tui]\n";
 }
 
 }  // namespace
@@ -39,6 +41,7 @@ int main(int argc, char** argv) {
     uint64_t maxCycles = 100000;
     bool trace = false;
     bool debug = false;
+    bool tui = false;
 
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
@@ -56,6 +59,8 @@ int main(int argc, char** argv) {
             trace = true;
         } else if (arg == "--debug") {
             debug = true;
+        } else if (arg == "--tui") {
+            tui = true;
         } else if (arg == "--help" || arg == "-h") {
             usage();
             return EXIT_SUCCESS;
@@ -76,6 +81,13 @@ int main(int argc, char** argv) {
         cpu.LoadMicrocode(romPath, tablePath);
         cpu.LoadProgram(programPath);
         cpu.Reset();
+
+        if (tui) {
+            Debugger debugger(cpu, programPath, maxCycles);
+            Tui view(debugger, cpu);
+            view.Run();
+            return EXIT_SUCCESS;
+        }
 
         if (debug) {
             Debugger debugger(cpu, programPath, maxCycles);
