@@ -1,6 +1,6 @@
 CXX ?= g++
 CXXFLAGS ?= -std=c++17 -Wall -Wextra -O2
-INCLUDES := -Iinclude
+INCLUDES := -Iinclude -I../processor_sim4/include
 
 SRCS := main.cpp $(wildcard src/components/*.cpp src/stages/*.cpp src/core/*.cpp)
 OBJS := $(SRCS:.cpp=.o)

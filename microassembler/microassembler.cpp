@@ -61,7 +61,7 @@ const std::unordered_map<std::string, microinstructionDetails> Microassembler::m
     {"mcall", {0x25, ""}},      // call
 };
 
-// Active macroinstructions, matching the project ISA (44 opcodes 0x00 - 0x2B).
+// Active macroinstructions, matching the project ISA (45 opcodes 0x00 - 0x2C).
 const std::unordered_map<uint8_t, std::string> Microassembler::macroOpcodeTable = {
     {0x00, "nop"},  {0x01, "add"},  {0x02, "sub"},  {0x03, "mul"},
     {0x04, "div"},  {0x05, "mod"},  {0x06, "and"},  {0x07, "or"},
@@ -74,6 +74,7 @@ const std::unordered_map<uint8_t, std::string> Microassembler::macroOpcodeTable 
     {0x20, "fmul"}, {0x21, "fdiv"}, {0x22, "fcmp"}, {0x23, "b"},
     {0x24, "beq"},  {0x25, "bgt"},  {0x26, "call"}, {0x27, "ret"},
     {0x28, "movz"}, {0x29, "retz"}, {0x2A, "ebreak"}, {0x2B, "ecall"},
+    {0x2C, "xtime"},
 };
 
 Microassembler::Microassembler(const std::string& inputFilePath) : inputFile(inputFilePath) {
@@ -238,7 +239,14 @@ uint64_t Microassembler::encodeInstruction(const std::vector<std::string>& token
             case 'd': dest = encodeRegister(operands[i]); break;
             case '1': src1 = encodeRegister(operands[i]); break;
             case '2': src2 = encodeRegister(operands[i]); break;
-            case 'i': immediate = encodeImmediate(operands[i]); break;
+            case 'i':
+                if (operands[i] == "imm") {
+                    immediate = 0;       // macro immediate at run time (B_IMM)
+                } else {
+                    immediate = encodeImmediate(operands[i]);
+                    src2 |= 0x10;        // flag: use this ROM literal (B_CONST)
+                }
+                break;
         }
     }
 
@@ -292,7 +300,7 @@ void Microassembler::writeAddressTableRom(const std::string& path) const {
     // so a missing sequence fails cleanly and leaves no partial output.
     std::vector<uint8_t> addresses;
     std::vector<std::string> missing;
-    for (uint16_t opcode = 0x00; opcode <= 0x2B; ++opcode) {
+    for (uint16_t opcode = 0x00; opcode <= 0x2C; ++opcode) {
         auto macro = macroOpcodeTable.find(static_cast<uint8_t>(opcode));
         if (macro == macroOpcodeTable.end()) {
             continue;

@@ -1,0 +1,68 @@
+rdb - RISC201 pipeline debugger. Program: build/programs/breakpoints.bin (12 instructions). Type 'help'.
+(rdb) # program: breakpoints
+(rdb) # Software breakpoints (ebreak + precise trap), watchpoints, inspection.
+(rdb) disasm 0 12
+=>   0x0000:  0x68400001  movi r1, 1
+     0x0004:  0x6880000a  movi r2, 10
+     0x0008:  0x68c00000  movi r3, 0
+     0x000c:  0x04cc4000  add r3, r3, r1
+     0x0010:  0x3c440001  addi r1, r1, 1
+     0x0014:  0x38048000  cmp r1, r2
+     0x0018:  0x94000002  bgt 0x0020
+     0x001c:  0x8ffffffc  b 0x000c  (T)
+     0x0020:  0x74c00100  st r3, r0, 256
+     0x0024:  0x71000100  ld r4, r0, 256
+     0x0028:  0x3d500001  addi r5, r4, 1
+     0x002c:  0x8e000000  b 0x002c  (T)
+(rdb) break 0x0c
+Breakpoint 1 at 0x000c: add r3, r3, r1
+(rdb) run
+Breakpoint 1 at 0x000c: add r3, r3, r1   (cycle 9)
+Next fetch => 0x000c: add r3, r3, r1
+(rdb) print r3
+r3 = 0x00000000 (0)
+(rdb) print r1
+r1 = 0x00000001 (1)
+(rdb) continue
+Breakpoint 1 at 0x000c: add r3, r3, r1   (cycle 25)
+Next fetch => 0x000c: add r3, r3, r1
+(rdb) continue
+Breakpoint 1 at 0x000c: add r3, r3, r1   (cycle 41)
+Next fetch => 0x000c: add r3, r3, r1
+(rdb) info break
+  1  sw  on   0x000c  add r3, r3, r1           hits 3
+(rdb) delete 1
+Deleted breakpoint 1.
+(rdb) watch mem 256
+Watchpoint 2: mem[0x0100] (now 0)
+(rdb) continue
+Watchpoint 2: mem[0x0100] changed 0 -> 55   (by 0x0020: st r3, r0, 256 in MA, cycle 78)
+Next fetch => 0x002c: b 0x002c  (T)
+(rdb) x 256 1
+mem[0x0100] = 0x00000037  55
+(rdb) watch r5
+Watchpoint 3: r5 (now 0)
+(rdb) continue
+Watchpoint 3: r5 changed 0 -> 56   (by 0x0028: addi r5, r4, 1, cycle 82)
+Next fetch => 0x002c: b 0x002c  (T)
+(rdb) regs
+r0  = 0x00000000           0     r1  = 0x0000000b          11
+r2  = 0x0000000a          10     r3  = 0x00000037          55
+r4  = 0x00000037          55     r5  = 0x00000038          56
+r6  = 0x00000000           0     r7  = 0x00000000           0
+r8  = 0x00000000           0     r9  = 0x00000000           0
+r10 = 0x00000000           0     r11 = 0x00000000           0
+r12 = 0x00000000           0     r13 = 0x00000000           0
+sp  = 0x00000000           0     r15 = 0x00000000           0
+pc (next fetch) = 0x002c   flags E:0 GT:1 LT:0
+(rdb) stats
+cycles           82
+instructions     55
+CPI              1.49
+mispredictions   1
+stall cycles     1
+exceptions taken 0
+halted           no
+(rdb) continue
+Program halted (branch to self at 0x002c) after 83 cycles.
+(rdb) quit

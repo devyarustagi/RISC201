@@ -1,0 +1,59 @@
+rdb - RISC201 pipeline debugger. Program: build/programs/hazards.bin (25 instructions). Type 'help'.
+(rdb) # program: hazards
+(rdb) # 6-stage hazards: a mispredicted beq flushes three wrong-path instructions
+(rdb) # (including a ret that already popped the RAS in IBU), then the load-use stall.
+(rdb) break 0x3c
+Breakpoint 1 at 0x003c: beq 0x0048
+(rdb) run
+Breakpoint 1 at 0x003c: beq 0x0048   (cycle 11)
+Next fetch => 0x003c: beq 0x0048
+(rdb) step 4
+cyc   12 | IF 0x0040 | IBU 0x003c beq   | RF -            | EX -            | MA -            | RW -            | retired (nothing)
+cyc   13 | IF 0x0044 | IBU 0x0040 ret   | RF 0x003c beq   | EX -            | MA -            | RW -            | retired (nothing)
+cyc   14 | IF 0x000c | IBU -            | RF 0x0040 ret   | EX 0x003c beq   | MA -            | RW -            | retired (nothing)
+cyc   15 | IF 0x0048 | IBU -            | RF -            | EX -            | MA 0x003c beq   | RW -            | retired (nothing)
+cycle 15   next fetch 0x0048   CPL 0   flags E:1 GT:0 LT:0   RAS depth 1
+  IF/IBU  (bubble)
+  IBU/RF  (bubble)
+  RF/EX   (bubble)
+  EX/MA   0x003c  beq 0x0048                branch if E  result=0  MISPREDICT
+  MA/RW   (bubble)
+  retired   (nothing)
+(rdb) print pc
+pc (next fetch) = 0x0048
+(rdb) delete
+Deleted all breakpoints and watchpoints.
+(rdb) break 0x14
+Breakpoint 2 at 0x0014: ld r3, r0, 256
+(rdb) continue
+Breakpoint 2 at 0x0014: ld r3, r0, 256   (cycle 33)
+Next fetch => 0x0014: ld r3, r0, 256
+(rdb) step 6
+cyc   34 | IF 0x0018 | IBU 0x0014 ld    | RF -            | EX -            | MA -            | RW -            | retired (nothing)
+cyc   35 | IF 0x001c | IBU 0x0018 st    | RF 0x0014 ld    | EX -            | MA -            | RW -            | retired (nothing)
+cyc   36 | IF 0x0020 | IBU 0x001c movi  | RF 0x0018 st    | EX 0x0014 ld    | MA -            | RW -            | retired (nothing)
+cyc   37 | IF 0x0020 | IBU 0x001c movi  | RF 0x0018 st    | EX -            | MA 0x0014 ld    | RW -            | retired (nothing)
+cyc   38 | IF 0x0024 | IBU 0x0020 add   | RF 0x001c movi  | EX 0x0018 st    | MA -            | RW 0x0014 ld    | retired (nothing)
+cyc   39 | IF 0x0028 | IBU 0x0024 add   | RF 0x0020 add   | EX 0x001c movi  | MA 0x0018 st    | RW -            | retired 0x0014  ld r3, r0, 256   r3 <- 7
+cycle 39   next fetch 0x0028   CPL 0   flags E:1 GT:0 LT:0   RAS depth 0
+  IF/IBU  0x0024  add r6, r5, r5            (fetched, decoded next)
+  IBU/RF  0x0020  add r5, r4, r4            ALU ADD -> r5  imm=0
+  RF/EX   0x001c  movi r4, 21               ALU PASS -> r4  read op1=0 op2=0
+  EX/MA   0x0018  st r3, r0, 260            store  result=260
+  MA/RW   (bubble)
+  retired   0x0014  ld r3, r0, 256   r3 <- 7
+(rdb) stats
+cycles           39
+instructions     14
+CPI              2.79
+mispredictions   2
+stall cycles     1
+exceptions taken 0
+halted           no
+(rdb) continue
+Program halted (branch to self at 0x0030) after 47 cycles.
+(rdb) print r1
+r1 = 0x00000007 (7)
+(rdb) print mem 260
+mem[0x0104] = 0x00000007 (7)
+(rdb) quit

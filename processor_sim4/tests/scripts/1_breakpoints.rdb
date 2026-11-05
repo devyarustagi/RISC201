@@ -1,0 +1,20 @@
+# program: breakpoints
+# Software breakpoints (ebreak + precise trap), watchpoints, inspection.
+disasm 0 12
+break 0x0c
+run
+print r3
+print r1
+continue
+continue
+info break
+delete 1
+watch mem 256
+continue
+x 256 1
+watch r5
+continue
+regs
+stats
+continue
+quit

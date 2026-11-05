@@ -1,0 +1,95 @@
+.nop
+    alu=ADD src1=s15 srcB=const imm=0 dst=s15
+.add
+    alu=ADD srcA=op1 srcB=op2 dst=rd
+.sub
+    alu=SUB srcA=op1 srcB=op2 dst=rd
+.mul
+    alu=MUL srcA=op1 srcB=op2 dst=rd
+.div
+    alu=DIV srcA=op1 srcB=op2 dst=rd
+.mod
+    alu=MOD srcA=op1 srcB=op2 dst=rd
+.and
+    alu=AND srcA=op1 srcB=op2 dst=rd
+.or
+    alu=OR srcA=op1 srcB=op2 dst=rd
+.xor
+    alu=XOR srcA=op1 srcB=op2 dst=rd
+.lsl
+    alu=LSL srcA=op1 srcB=op2 dst=rd
+.lsr
+    alu=LSR srcA=op1 srcB=op2 dst=rd
+.asr
+    alu=ASR srcA=op1 srcB=op2 dst=rd
+.not
+    alu=NOT srcA=op1 dst=rd
+.mov
+    alu=PASS srcA=op2 dst=rd
+.cmp
+    alu=CMP srcA=op1 srcB=op2
+.addi
+    alu=ADD srcA=op1 srcB=imm dst=rd
+.subi
+    alu=SUB srcA=op1 srcB=imm dst=rd
+.muli
+    alu=MUL srcA=op1 srcB=imm dst=rd
+.divi
+    alu=DIV srcA=op1 srcB=imm dst=rd
+.modi
+    alu=MOD srcA=op1 srcB=imm dst=rd
+.andi
+    alu=AND srcA=op1 srcB=imm dst=rd
+.ori
+    alu=OR srcA=op1 srcB=imm dst=rd
+.xori
+    alu=XOR srcA=op1 srcB=imm dst=rd
+.lsli
+    alu=LSL srcA=op1 srcB=imm dst=rd
+.lsri
+    alu=LSR srcA=op1 srcB=imm dst=rd
+.asri
+    alu=ASR srcA=op1 srcB=imm dst=rd
+.movi
+    alu=PASS srcA=imm dst=rd
+.cmpi
+    alu=CMP srcA=op1 srcB=imm
+.ld
+    alu=ADD srcA=op1 srcB=imm dst=rd ld
+.st
+    alu=ADD srcA=op1 srcB=imm st
+.fadd
+    alu=FADD srcA=op1 srcB=op2 dst=rd
+.fsub
+    alu=FSUB srcA=op1 srcB=op2 dst=rd
+.fmul
+    alu=FMUL srcA=op1 srcB=op2 dst=rd
+.fdiv
+    alu=FDIV srcA=op1 srcB=op2 dst=rd
+.fcmp
+    alu=FCMP srcA=op1 srcB=op2
+.b
+    alu=ADD ub
+.beq
+    alu=ADD beq
+.bgt
+    alu=ADD bgt
+.call
+    alu=ADD call ub
+.ret
+    alu=ADD ret
+.movz
+    alu=PASS srcA=op2 srcB=op2 movz
+.retz
+    alu=ADD retz
+.ebreak
+    alu=ADD
+.ecall
+    alu=ADD
+.xtime
+    alu=ADD srcA=op1 srcB=const imm=0 dst=s0
+    alu=LSR src1=s0 srcB=const imm=7 dst=s1
+    alu=MUL src1=s1 srcB=const imm=27 dst=s1
+    alu=LSL src1=s0 srcB=const imm=1 dst=s0
+    alu=XOR src1=s0 src2=s1 srcB=scratch dst=s0
+    alu=AND src1=s0 srcB=const imm=255 dst=rd

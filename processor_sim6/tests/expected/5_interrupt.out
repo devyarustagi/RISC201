@@ -1,0 +1,61 @@
+rdb - RISC201 pipeline debugger. Program: build/programs/interrupt.bin (28 instructions). Type 'help'.
+(rdb) # program: interrupt
+(rdb) # Raise an interrupt from the CLI while the user program runs.
+(rdb) catch interrupt
+Catching: interrupt
+(rdb) break 0x60
+Breakpoint 1 at 0x0060: cmp r1, r2
+(rdb) run
+Breakpoint 1 at 0x0060: cmp r1, r2   (cycle 23)
+Next fetch => 0x0060: cmp r1, r2
+(rdb) print r1
+r1 = 0x00000001 (1)
+(rdb) delete 1
+Deleted breakpoint 1.
+(rdb) interrupt
+Interrupt requested: the next instruction fetched will be marked.
+(rdb) special
+CPL      = 1 (user mode)
+eBase    = 0x001c
+eCode    = 0 (none)
+oldPC    = 0x0050
+oldSP    = 0x00000000
+oldFlags = E:0 GT:0 LT:0
+interrupt pending = yes
+(rdb) continue
+Caught exception interrupt at 0x0060: cmp r1, r2
+  eCode=7  oldPC=0x0060  oldFlags=E:0 GT:0 LT:1  CPL=0  -> handler at eBase=0x001c
+Next fetch => 0x001c: movz oldSP, sp
+(rdb) special
+CPL      = 0 (OS mode)
+eBase    = 0x001c
+eCode    = 7 (interrupt)
+oldPC    = 0x0060
+oldSP    = 0x00000000
+oldFlags = E:0 GT:0 LT:1
+interrupt pending = no
+(rdb) pipe
+cycle 29   next fetch 0x001c   CPL 0   flags E:0 GT:0 LT:1   RAS depth 0
+  IF/IBU  (bubble)
+  IBU/RF  (bubble)
+  RF/EX   (bubble)
+  EX/MA   (bubble)
+  MA/RW   (bubble)
+  retired   0x0060  cmp r1, r2   [EXCEPTION interrupt -> eBase]
+(rdb) print r10
+r10 = 0x00000000 (0)
+(rdb) print r11
+r11 = 0x00000000 (0)
+(rdb) continue
+Program halted (branch to self at 0x006c) after 856 cycles.
+(rdb) print r1
+r1 = 0x000000c8 (200)
+(rdb) stats
+cycles           856
+instructions     820
+CPI              1.04
+mispredictions   2
+stall cycles     11
+exceptions taken 1
+halted           yes
+(rdb) quit

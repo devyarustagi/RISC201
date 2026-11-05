@@ -140,3 +140,13 @@
 
 .ecall
     mecall
+
+# GF(2^8) multiply-by-x (xtime), AES polynomial x^8+x^4+x^3+x+1 (0x1B):
+#   rd = ((x << 1) ^ ((x >> 7) * 0x1B)) & 0xFF
+.xtime
+    maddi s0, rs1, 0
+    mlsri s1, s0, 7
+    mmuli s1, s1, 27
+    mlsli s0, s0, 1
+    mxor s0, s0, s1
+    mandi rd, s0, 255

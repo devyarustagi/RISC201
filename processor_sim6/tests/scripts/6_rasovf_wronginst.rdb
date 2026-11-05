@@ -1,0 +1,14 @@
+# program: rasovf
+# RAS overflow on the 17th nested call, then an invalid opcode planted with 'set inst'.
+catch rasovf wronginst
+run
+print r1
+pipe
+special
+reset
+set inst 0x58 0xfc000000
+disasm 0x50 5
+continue
+special
+pipe
+quit

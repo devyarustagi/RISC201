@@ -55,5 +55,6 @@ const std::unordered_map<instructionName, instructionDetails> Assembler::instruc
     {"retz",   {instructionOpcode(0x29), instructionFields(0)}},
     {"ebreak", {instructionOpcode(0x2A), instructionFields(0)}},
     {"ecall",  {instructionOpcode(0x2B), instructionFields(0)}},
+    {"xtime",  {instructionOpcode(0x2C), instructionFields(HAS_RD | HAS_RS1)}},
 
 };

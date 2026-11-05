@@ -1,0 +1,17 @@
+# program: exceptions
+# Catch each exception as it is taken; inspect the context switch.
+catch all
+run
+special
+pipe
+continue
+special
+continue
+continue
+print r10
+print r11
+uncatch all
+continue
+regs
+stats
+quit

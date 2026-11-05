@@ -1,0 +1,14 @@
+# program: exceptions
+# Break inside the handler and step through it; retz returns to user mode.
+catch div0
+run
+break 0x4c
+continue
+special
+print sp
+step 3
+pipe
+special
+delete
+continue
+quit

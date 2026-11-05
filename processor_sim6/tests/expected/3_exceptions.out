@@ -1,0 +1,72 @@
+rdb - RISC201 pipeline debugger. Program: build/programs/exceptions.bin (30 instructions). Type 'help'.
+(rdb) # program: exceptions
+(rdb) # Catch each exception as it is taken; inspect the context switch.
+(rdb) catch all
+Catching: pbrk scall div0 rasovf wronginst lowpriv interrupt
+(rdb) run
+Caught exception div0 at 0x005c: div r3, r1, r2
+  eCode=3  oldPC=0x005c  oldFlags=E:0 GT:0 LT:0  CPL=0  -> handler at eBase=0x001c
+Next fetch => 0x001c: movz oldSP, sp
+(rdb) special
+CPL      = 0 (OS mode)
+eBase    = 0x001c
+eCode    = 3 (div0)
+oldPC    = 0x005c
+oldSP    = 0x00000000
+oldFlags = E:0 GT:0 LT:0
+interrupt pending = no
+(rdb) pipe
+cycle 22   next fetch 0x001c   CPL 0   flags E:0 GT:0 LT:0   RAS depth 0
+  IF/IBU  (bubble)
+  IBU/RF  (bubble)
+  RF/EX   (bubble)
+  EX/MA   (bubble)
+  MA/RW   (bubble)
+  retired   0x005c  div r3, r1, r2   [EXCEPTION div0 -> eBase]
+(rdb) continue
+Caught exception scall at 0x0060: ecall
+  eCode=2  oldPC=0x0060  oldFlags=E:0 GT:0 LT:1  CPL=0  -> handler at eBase=0x001c
+Next fetch => 0x001c: movz oldSP, sp
+(rdb) special
+CPL      = 0 (OS mode)
+eBase    = 0x001c
+eCode    = 2 (scall)
+oldPC    = 0x0060
+oldSP    = 0x00001000
+oldFlags = E:0 GT:0 LT:1
+interrupt pending = no
+(rdb) continue
+Caught exception pbrk at 0x0064: ebreak
+  eCode=1  oldPC=0x0064  oldFlags=E:0 GT:0 LT:1  CPL=0  -> handler at eBase=0x001c
+Next fetch => 0x001c: movz oldSP, sp
+(rdb) continue
+Caught exception lowpriv at 0x0068: movz eBase, sp
+  eCode=6  oldPC=0x0068  oldFlags=E:0 GT:0 LT:1  CPL=0  -> handler at eBase=0x001c
+Next fetch => 0x001c: movz oldSP, sp
+(rdb) print r10
+r10 = 0x00000003 (3)
+(rdb) print r11
+r11 = 0x00000001 (1)
+(rdb) uncatch all
+Catching: (none)
+(rdb) continue
+Program halted (branch to self at 0x0074) after 148 cycles.
+(rdb) regs
+r0  = 0x00000000           0     r1  = 0x0000000a          10
+r2  = 0x00000000           0     r3  = 0x00000000           0
+r4  = 0x00000005           5     r5  = 0x00000006           6
+r6  = 0x00000000           0     r7  = 0x00000000           0
+r8  = 0x00000000           0     r9  = 0x00000000           0
+r10 = 0x00000004           4     r11 = 0x00000006           6
+r12 = 0x00000000           0     r13 = 0x00000000           0
+sp  = 0x00001000        4096     r15 = 0x00000000           0
+pc (next fetch) = 0x0074   flags E:0 GT:0 LT:1
+(rdb) stats
+cycles           148
+instructions     65
+CPI              2.28
+mispredictions   0
+stall cycles     49
+exceptions taken 4
+halted           yes
+(rdb) quit
