@@ -114,7 +114,30 @@ ld rd, rs1, imm
 st rd, rs1, imm
 ```
 
-### 7. Privileged / exception instructions
+### 7. Stack pseudo-operation
+
+```asm
+PUSH r0
+POP r1
+```
+
+These assembler pseudo-operations expand into equivalent instruction
+sequences:
+
+```asm
+# PUSH r0
+subi r14, r14, 4
+st  r0, r14, 0
+
+# POP r1
+ld  r1, r14, 0
+addi r14, r14, 4
+```
+
+`r14` is the stack pointer alias (`sp`). `PUSH` decrements it by 4 bytes before
+storing the register; `POP` loads from the current top before incrementing it.
+
+### 8. Privileged / exception instructions
 
 ```asm
 movz eBase, sp

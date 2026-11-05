@@ -100,6 +100,38 @@ void Assembler::tokenizer(std::string& line) {
                                 ": got ',' after end of an instruction.");
     }
     instructionName iName = tokens[0];
+    if (iName == "PUSH" || iName == "push" ||
+        iName == "POP" || iName == "pop") {
+        if (tokens.size() != 2) {
+            throw std::runtime_error("Error: line " + std::to_string(lineNumber) +
+                                    ": " + iName + " expects exactly one register operand.");
+        }
+
+        const std::string reg = tokens[1];
+        parseRegister(reg, lineNumber);
+
+        instructionIR firstInstruction;
+        firstInstruction.lineNumber = lineNumber;
+        firstInstruction.address = lc;
+        firstInstruction.mnemonic = (iName == "PUSH" || iName == "push") ? "subi" : "ld";
+        firstInstruction.operands = (iName == "PUSH" || iName == "push")
+            ? std::vector<std::string>{"r14", "r14", "4"}
+            : std::vector<std::string>{reg, "r14", "0"};
+        irList.push_back(firstInstruction);
+        lc += 4;
+
+        instructionIR secondInstruction;
+        secondInstruction.lineNumber = lineNumber;
+        secondInstruction.address = lc;
+        secondInstruction.mnemonic = (iName == "PUSH" || iName == "push") ? "st" : "addi";
+        secondInstruction.operands = (iName == "PUSH" || iName == "push")
+            ? std::vector<std::string>{reg, "r14", "0"}
+            : std::vector<std::string>{"r14", "r14", "4"};
+        irList.push_back(secondInstruction);
+        lc += 4;
+        return;
+    }
+
     if (instructionTable.count(iName) == 0) {
         throw std::runtime_error("Error: line " + std::to_string(lineNumber) +
                                 ": instruction '" + tokens[0] + "' is not recognized.");
